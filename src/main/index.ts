@@ -141,11 +141,77 @@ async function openTodoSource(): Promise<void> {
   await shell.openPath(filePath);
 }
 
+async function importPetZip(zipPath?: string): Promise<PetPackage | undefined> {
+  let selectedPath = zipPath;
+  if (!selectedPath) {
+    const result = await dialog.showOpenDialog({
+      title: 'Import Codex Pet Zip',
+      filters: [{ name: 'Zip files', extensions: ['zip'] }],
+      properties: ['openFile']
+    });
+    selectedPath = result.filePaths[0];
+  }
+  if (!selectedPath) {
+    return undefined;
+  }
+  const pet = await petRegistry.importZip(selectedPath);
+  await sendPetsChanged();
+  return { ...pet, spritesheetUrl: `todolist-pet://${encodeURIComponent(pet.id)}/spritesheet.webp` };
+}
+
 async function listPetsWithUrls(): Promise<PetPackage[]> {
   return (await petRegistry.list()).map((pet) => ({
     ...pet,
     spritesheetUrl: `todolist-pet://${encodeURIComponent(pet.id)}/spritesheet.webp`
   }));
+}
+
+async function showPetMenu(): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  const pets = await listPetsWithUrls();
+  const petItems: Electron.MenuItemConstructorOptions[] =
+    pets.length > 0
+      ? pets.map((pet) => ({
+          label: pet.displayName,
+          click: () => mainWindow?.webContents.send('ui:selectPet', pet.id)
+        }))
+      : [{ label: 'No pets found', enabled: false }];
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Add TODO',
+      click: () => mainWindow?.webContents.send('ui:openComposer')
+    },
+    {
+      label: 'Open Markdown',
+      click: async () => {
+        await openTodoSource();
+      }
+    },
+    {
+      label: 'Import Pet Zip',
+      click: async () => {
+        await importPetZip();
+      }
+    },
+    {
+      label: 'Refresh Pets',
+      click: async () => {
+        await sendPetsChanged();
+      }
+    },
+    { type: 'separator' },
+    ...petItems,
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => app.quit()
+    }
+  ]);
+
+  menu.popup({ window: mainWindow });
 }
 
 function registerPetProtocol(): void {
@@ -197,22 +263,9 @@ function registerIpc(): void {
     return pets;
   });
   ipcMain.handle('pets:importZip', async (_event, zipPath?: string) => {
-    let selectedPath = zipPath;
-    if (!selectedPath) {
-      const result = await dialog.showOpenDialog({
-        title: 'Import Codex Pet Zip',
-        filters: [{ name: 'Zip files', extensions: ['zip'] }],
-        properties: ['openFile']
-      });
-      selectedPath = result.filePaths[0];
-    }
-    if (!selectedPath) {
-      return undefined;
-    }
-    const pet = await petRegistry.importZip(selectedPath);
-    await sendPetsChanged();
-    return { ...pet, spritesheetUrl: `todolist-pet://${encodeURIComponent(pet.id)}/spritesheet.webp` };
+    return importPetZip(zipPath);
   });
+  ipcMain.handle('ui:showPetMenu', async () => showPetMenu());
 
   ipcMain.handle('window:moveBy', (event, deltaX: number, deltaY: number) => {
     const window = BrowserWindow.fromWebContents(event.sender);

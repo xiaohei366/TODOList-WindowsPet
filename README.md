@@ -1,5 +1,7 @@
 # TODOList Windows Codex Pet
 
+[中文文档](README.zh-CN.md)
+
 Windows desktop pet TODO manager built with Electron, React, and TypeScript. It keeps TODO data in a readable Markdown file and reuses Codex-compatible pet packages from the local Codex pet ecosystem.
 
 ## Features
