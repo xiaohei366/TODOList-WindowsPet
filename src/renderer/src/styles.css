@@ -40,7 +40,7 @@ button {
 .todo-panel {
   position: absolute;
   left: 50%;
-  top: 18px;
+  top: 72px;
   z-index: 4;
   width: 304px;
   max-width: calc(100% - 28px);
@@ -256,4 +256,26 @@ button {
 
 .context-menu .danger {
   color: #a5322a;
+}
+
+.menu-submenu {
+  position: relative;
+}
+
+.context-submenu-panel {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 0;
+  display: none;
+  width: 150px;
+  padding: 5px;
+  border: 1px solid rgba(36, 54, 48, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 34px rgba(26, 37, 34, 0.22);
+}
+
+.menu-submenu:hover .context-submenu-panel,
+.menu-submenu:focus-within .context-submenu-panel {
+  display: grid;
 }
