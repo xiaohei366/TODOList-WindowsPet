@@ -2,13 +2,17 @@ import {
   Check,
   Circle,
   Flag,
+  ListOrdered,
   Plus,
+  ArrowDown,
+  ArrowUp,
   Trash2,
   X
 } from 'lucide-react';
 import { FormEvent, PointerEvent, ReactElement, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { PetPackage, PetState, TodoItem } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
+import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
 
 type MenuPoint = { x: number; y: number };
 type TaskMenu = MenuPoint & { item: TodoItem };
@@ -28,6 +32,7 @@ export function App(): ReactElement {
   const [transientState, setTransientState] = useState<PetState | null>(null);
   const longPressTimer = useRef<number | undefined>(undefined);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const todoPressStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     void window.todoPet.todos.list().then(setTodos);
@@ -150,21 +155,52 @@ export function App(): ReactElement {
     if (item.completed || event.button !== 0) {
       return;
     }
+    todoPressStart.current = { x: event.clientX, y: event.clientY };
     window.clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
       setDraggingTodo(item);
-    }, 350);
+    }, 220);
   }
 
   function cancelTodoPress(): void {
     window.clearTimeout(longPressTimer.current);
+    todoPressStart.current = null;
   }
 
-  function hoverTodo(item: TodoItem): void {
+  function handleTodoPointerMove(event: PointerEvent<HTMLElement>, item: TodoItem): void {
+    if (!draggingTodo && todoPressStart.current) {
+      const deltaX = event.clientX - todoPressStart.current.x;
+      const deltaY = event.clientY - todoPressStart.current.y;
+      if (Math.hypot(deltaX, deltaY) > 10) {
+        cancelTodoPress();
+      }
+      return;
+    }
+
+    if (!draggingTodo) {
+      return;
+    }
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const placement: TodoPlacement = event.clientY > bounds.top + bounds.height / 2 ? 'after' : 'before';
+    hoverTodo(item, placement);
+  }
+
+  function hoverTodo(item: TodoItem, placement: TodoPlacement): void {
     if (!draggingTodo || item.id === draggingTodo.id || item.date !== draggingTodo.date || item.completed) {
       return;
     }
-    setTodos((current) => moveTodoBefore(current, draggingTodo.id, item.id));
+    setTodos((current) => moveTodoRelative(current, draggingTodo.id, item.id, placement));
+  }
+
+  function applyPriorityStep(item: TodoItem, direction: 'up' | 'down'): void {
+    const next = moveTodoStep(todos, item.id, direction);
+    if (next === todos) {
+      return;
+    }
+    setTodos(next);
+    setTaskMenu(null);
+    const activeIds = next.filter((todo) => todo.date === item.date && !todo.completed).map((todo) => todo.id);
+    void window.todoPet.todos.reorder(item.date, activeIds).then(setTodos);
   }
 
   function startWindowDrag(event: PointerEvent<HTMLDivElement>): void {
@@ -219,9 +255,9 @@ export function App(): ReactElement {
                 key={item.id}
                 onContextMenu={(event) => openTaskMenu(event, item)}
                 onPointerDown={(event) => startTodoPress(event, item)}
-                onPointerEnter={() => hoverTodo(item)}
-                onPointerMove={cancelTodoPress}
+                onPointerMove={(event) => handleTodoPointerMove(event, item)}
                 onPointerUp={cancelTodoPress}
+                onPointerCancel={cancelTodoPress}
               >
                 <button
                   className="todo-check"
@@ -258,6 +294,19 @@ export function App(): ReactElement {
           <button onClick={() => void window.todoPet.todos.setHighlighted(taskMenu.item.id, !taskMenu.item.highlighted)}>
             <Flag size={15} /> {taskMenu.item.highlighted ? 'Unmark Red' : 'Mark Red'}
           </button>
+          <div className="menu-submenu">
+            <button>
+              <ListOrdered size={15} /> Adjust Priority
+            </button>
+            <div className="context-submenu-panel">
+              <button onClick={() => applyPriorityStep(taskMenu.item, 'up')}>
+                <ArrowUp size={15} /> Move Up
+              </button>
+              <button onClick={() => applyPriorityStep(taskMenu.item, 'down')}>
+                <ArrowDown size={15} /> Move Down
+              </button>
+            </div>
+          </div>
           <button className="danger" onClick={() => void window.todoPet.todos.delete(taskMenu.item.id)}>
             <Trash2 size={15} /> Delete
           </button>
@@ -318,22 +367,3 @@ function useAnimationFrame(state: PetState): number {
   return frame;
 }
 
-function moveTodoBefore(items: TodoItem[], draggedId: string, targetId: string): TodoItem[] {
-  const dragged = items.find((item) => item.id === draggedId);
-  const target = items.find((item) => item.id === targetId);
-  if (!dragged || !target || dragged.date !== target.date) {
-    return items;
-  }
-
-  const sameDay = items.filter((item) => item.date === dragged.date);
-  const reorderedSameDay = sameDay.filter((item) => item.id !== draggedId);
-  const targetIndex = reorderedSameDay.findIndex((item) => item.id === targetId);
-  reorderedSameDay.splice(Math.max(targetIndex, 0), 0, dragged);
-
-  return items.map((item) => {
-    if (item.date !== dragged.date) {
-      return item;
-    }
-    return reorderedSameDay.shift()!;
-  });
-}
