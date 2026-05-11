@@ -37,6 +37,10 @@ let petRegistry: PetRegistry;
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
+function getBundledAssetPath(fileName: string): string {
+  return join(currentDir, '../../build', fileName);
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 420,
@@ -50,6 +54,7 @@ function createWindow(): void {
     skipTaskbar: true,
     hasShadow: false,
     backgroundColor: '#00000000',
+    icon: getBundledAssetPath('icon.png'),
     webPreferences: {
       preload: join(currentDir, '../preload/index.mjs'),
       contextIsolation: true,
@@ -72,10 +77,7 @@ function createWindow(): void {
 }
 
 function createTrayIcon(): Electron.NativeImage {
-  const icon = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEUSURBVFhHY1CvjndQr0xsGCjMACI0qhL/DxQedcCoA0YdMPwdEDe7879+XRqGOAzTzAEBk+v/P3n3+j8IfPr+9b9NewGGGhCmiQNAloMsRQZT9m7AUAfCVHcANstBABQV6GpBmKoOwGU5Lt+DMNUcQI7lIEyUAwilZHItB2G8DjBtyoan5B+/f/1v2LAQQw0lloMwXgdkL5mMbu7/5Sf3w0ODUstBGK8DQHkX5HN0cOHRnf+pC/oothyE8ToAhItWzMDqCGyAVMtBmKADQBi5VMMFyLEchIlyAAiDEuTJe9fR7QUDci0HYaIdAMMLj+6imuUgTLIDQDh8egs4N4ByCbocqZgsB1ATjzpg1AGjDhhwBwAAiE2fVI6/JEYAAAAASUVORK5CYII='
-  );
-  return icon.resize({ width: 16, height: 16 });
+  return nativeImage.createFromPath(getBundledAssetPath('icon.png')).resize({ width: 16, height: 16 });
 }
 
 function createTray(): void {

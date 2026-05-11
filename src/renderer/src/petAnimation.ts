@@ -6,7 +6,7 @@ const codexAtlasWidth = 1536;
 const codexAtlasHeight = 1872;
 const petRenderScale = 0.5;
 const desktopPetPlaybackScale = 1.6;
-const idlePlaybackScale = 2.4;
+const idlePlaybackScale = 4.8;
 
 export type PetSpriteStyle = {
   width: number;
