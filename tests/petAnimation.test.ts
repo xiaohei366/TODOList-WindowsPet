@@ -12,8 +12,14 @@ describe('petAnimation helpers', () => {
     expect(getAnimationSpec('review')).toMatchObject({
       row: 8,
       frameCount: 6,
-      durations: [150, 150, 150, 150, 150, 280]
+      durations: [240, 240, 240, 240, 240, 448]
     });
+  });
+
+  test('plays pet animations at a calmer desktop-pet cadence', () => {
+    expect(Math.min(...getAnimationSpec('running').durations)).toBeGreaterThanOrEqual(190);
+    expect(Math.min(...getAnimationSpec('review').durations)).toBeGreaterThanOrEqual(240);
+    expect(Math.max(...getAnimationSpec('idle').durations)).toBeGreaterThanOrEqual(500);
   });
 
   test('renders Codex pet cells at half visual size while preserving atlas offsets', () => {

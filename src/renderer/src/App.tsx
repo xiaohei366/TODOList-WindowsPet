@@ -10,6 +10,7 @@ export function App(): ReactElement {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [pets, setPets] = useState<PetPackage[]>([]);
   const [selectedPetId, setSelectedPetId] = useState<string>(() => localStorage.getItem(selectedPetStorageKey) ?? '');
+  const [todoPanelVisible, setTodoPanelVisible] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
@@ -36,12 +37,15 @@ export function App(): ReactElement {
         selectPet(loadedPets[0].id);
       }
     });
-    const offOpenComposer = window.todoPet.ui.onOpenComposer(() => setComposerOpen(true));
+    const offToggleTodoPanel = window.todoPet.ui.onToggleTodoPanel(() => {
+      setTodoPanelVisible((visible) => !visible);
+      setComposerOpen(false);
+    });
     const offSelectPet = window.todoPet.ui.onSelectPet((id) => selectPet(id));
     return () => {
       offTodos();
       offPets();
-      offOpenComposer();
+      offToggleTodoPanel();
       offSelectPet();
     };
   }, [selectedPetId]);
@@ -231,67 +235,69 @@ export function App(): ReactElement {
 
   return (
     <main className="pet-stage">
-      <section className="todo-panel" aria-label="TODO list">
-        <div className="todo-panel__top">
-          <span className="todo-panel__title">TODO</span>
-          <button className="icon-button" title="Add TODO" onClick={() => setComposerOpen(true)}>
-            <Plus size={16} />
-          </button>
-        </div>
-
-        {composerOpen ? (
-          <form className="todo-composer" onSubmit={(event) => void submitTodo(event)}>
-            <input
-              autoFocus
-              value={newTodoText}
-              onChange={(event) => setNewTodoText(event.target.value)}
-              placeholder="New TODO"
-            />
-            <button className="icon-button" title="Save TODO" type="submit">
-              <Check size={16} />
+      {todoPanelVisible ? (
+        <section className="todo-panel" aria-label="TODO list">
+          <div className="todo-panel__top">
+            <span className="todo-panel__title">TODO</span>
+            <button className="icon-button" title="Add TODO" onClick={() => setComposerOpen(true)}>
+              <Plus size={16} />
             </button>
-            <button className="icon-button" title="Cancel" type="button" onClick={() => setComposerOpen(false)}>
-              <X size={16} />
-            </button>
-          </form>
-        ) : null}
+          </div>
 
-        <div className="todo-list">
-          {todos.length === 0 ? (
-            <div className="empty-state">No active TODO</div>
-          ) : (
-            todos.map((item) => (
-              <article
-                className={[
-                  'todo-item',
-                  item.completed ? 'todo-item--done' : '',
-                  item.highlighted ? 'todo-item--hot' : '',
-                  draggingTodo?.id === item.id ? 'todo-item--dragging' : ''
-                ].join(' ')}
-                data-todo-id={item.id}
-                key={item.id}
-                onContextMenu={(event) => openTaskMenu(event, item)}
-                onPointerDown={(event) => startTodoPress(event, item)}
-                onPointerMove={(event) => handleTodoPointerMove(event, item)}
-                onPointerUp={cancelTodoPress}
-                onPointerCancel={cancelTodoPress}
-              >
-                <button
-                  className="todo-check"
-                  title={item.completed ? 'Mark active' : 'Mark done'}
-                  onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
+          {composerOpen ? (
+            <form className="todo-composer" onSubmit={(event) => void submitTodo(event)}>
+              <input
+                autoFocus
+                value={newTodoText}
+                onChange={(event) => setNewTodoText(event.target.value)}
+                placeholder="New TODO"
+              />
+              <button className="icon-button" title="Save TODO" type="submit">
+                <Check size={16} />
+              </button>
+              <button className="icon-button" title="Cancel" type="button" onClick={() => setComposerOpen(false)}>
+                <X size={16} />
+              </button>
+            </form>
+          ) : null}
+
+          <div className="todo-list">
+            {todos.length === 0 ? (
+              <div className="empty-state">No active TODO</div>
+            ) : (
+              todos.map((item) => (
+                <article
+                  className={[
+                    'todo-item',
+                    item.completed ? 'todo-item--done' : '',
+                    item.highlighted ? 'todo-item--hot' : '',
+                    draggingTodo?.id === item.id ? 'todo-item--dragging' : ''
+                  ].join(' ')}
+                  data-todo-id={item.id}
+                  key={item.id}
+                  onContextMenu={(event) => openTaskMenu(event, item)}
+                  onPointerDown={(event) => startTodoPress(event, item)}
+                  onPointerMove={(event) => handleTodoPointerMove(event, item)}
+                  onPointerUp={cancelTodoPress}
+                  onPointerCancel={cancelTodoPress}
                 >
-                  {item.completed ? <Check size={15} /> : <Circle size={15} />}
-                </button>
-                <div className="todo-copy">
-                  <span>{item.text}</span>
-                  <small>{item.overdue ? item.date : 'Today'}</small>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
+                  <button
+                    className="todo-check"
+                    title={item.completed ? 'Mark active' : 'Mark done'}
+                    onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
+                  >
+                    {item.completed ? <Check size={15} /> : <Circle size={15} />}
+                  </button>
+                  <div className="todo-copy">
+                    <span>{item.text}</span>
+                    <small>{item.overdue ? item.date : 'Today'}</small>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+      ) : null}
 
       <div
         className="pet-anchor"

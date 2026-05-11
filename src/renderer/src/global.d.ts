@@ -23,7 +23,7 @@ declare global {
       ui: {
         showPetMenu: (point: { x: number; y: number }) => Promise<void>;
         showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }) => Promise<void>;
-        onOpenComposer: (listener: () => void) => () => void;
+        onToggleTodoPanel: (listener: () => void) => () => void;
         onSelectPet: (listener: (id: string) => void) => () => void;
         onTodoAction: (listener: (action: TodoMenuAction) => void) => () => void;
       };
