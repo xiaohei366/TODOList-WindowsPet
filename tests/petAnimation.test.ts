@@ -22,6 +22,11 @@ describe('petAnimation helpers', () => {
     expect(Math.max(...getAnimationSpec('idle').durations)).toBeGreaterThanOrEqual(500);
   });
 
+  test('plays idle animation more slowly than active states', () => {
+    expect(getAnimationSpec('idle').durations).toEqual([672, 264, 264, 336, 336, 768]);
+    expect(getAnimationSpec('review').durations).toEqual([240, 240, 240, 240, 240, 448]);
+  });
+
   test('renders Codex pet cells at half visual size while preserving atlas offsets', () => {
     expect(getPetSpriteStyle('review', 2, 'todolist-pet://demo/spritesheet.webp')).toMatchObject({
       width: 96,

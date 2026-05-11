@@ -54,16 +54,16 @@ Run TypeScript checking:
 npm run typecheck
 ```
 
-Build an unpacked Windows app:
+Build a portable Windows executable:
 
 ```powershell
 npm run build
 ```
 
-The unpacked executable is generated at:
+The portable executable is generated at:
 
 ```text
-release/win-unpacked/TOList Desktop Pet.exe
+release/TOList-Desktop-Pet-0.1.0.exe
 ```
 
 ## Markdown TODO Format

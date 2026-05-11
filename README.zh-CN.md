@@ -54,16 +54,16 @@ npm test
 npm run typecheck
 ```
 
-构建 Windows 解包应用：
+构建 Windows 便携版可执行文件：
 
 ```powershell
 npm run build
 ```
 
-构建后的可执行文件位于：
+构建后的便携版可执行文件位于：
 
 ```text
-release/win-unpacked/TOList Desktop Pet.exe
+release/TOList-Desktop-Pet-0.1.0.exe
 ```
 
 ## Markdown TODO 格式
