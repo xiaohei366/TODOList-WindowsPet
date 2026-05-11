@@ -1,4 +1,4 @@
-import type { PetPackage, TodoItem } from '../../shared/types';
+import type { PetPackage, TodoItem, TodoMenuAction } from '../../shared/types';
 
 declare global {
   interface Window {
@@ -22,8 +22,10 @@ declare global {
       };
       ui: {
         showPetMenu: (point: { x: number; y: number }) => Promise<void>;
+        showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }) => Promise<void>;
         onOpenComposer: (listener: () => void) => () => void;
         onSelectPet: (listener: (id: string) => void) => () => void;
+        onTodoAction: (listener: (action: TodoMenuAction) => void) => () => void;
       };
       window: {
         moveBy: (deltaX: number, deltaY: number) => Promise<void>;

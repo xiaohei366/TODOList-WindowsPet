@@ -16,7 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TodoMarkdownStore } from './todoStore';
 import { PetRegistry } from './petRegistry';
 import { getAppPaths } from './paths';
-import type { PetPackage } from '../shared/types';
+import type { PetPackage, TodoItem, TodoMenuAction } from '../shared/types';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -71,27 +71,22 @@ function createWindow(): void {
   });
 }
 
-function createTray(): void {
+function createTrayIcon(): Electron.NativeImage {
   const icon = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEUSURBVFhHY1CvjndQr0xsGCjMACI0qhL/DxQedcCoA0YdMPwdEDe7879+XRqGOAzTzAEBk+v/P3n3+j8IfPr+9b9NewGGGhCmiQNAloMsRQZT9m7AUAfCVHcANstBABQV6GpBmKoOwGU5Lt+DMNUcQI7lIEyUAwilZHItB2G8DjBtyoan5B+/f/1v2LAQQw0lloMwXgdkL5mMbu7/5Sf3w0ODUstBGK8DQHkX5HN0cOHRnf+pC/oothyE8ToAhItWzMDqCGyAVMtBmKADQBi5VMMFyLEchIlyAAiDEuTJe9fR7QUDci0HYaIdAMMLj+6imuUgTLIDQDh8egs4N4ByCbocqZgsB1ATjzpg1AGjDhhwBwAAiE2fVI6/JEYAAAAASUVORK5CYII='
   );
-  tray = new Tray(icon);
+  return icon.resize({ width: 16, height: 16 });
+}
+
+function createTray(): void {
+  tray = new Tray(createTrayIcon());
   tray.setToolTip('TOList Desktop Pet');
+  tray.on('double-click', () => toggleMainWindow());
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
         label: 'Show / Hide',
-        click: () => {
-          if (!mainWindow) {
-            createWindow();
-            return;
-          }
-          if (mainWindow.isVisible()) {
-            mainWindow.hide();
-          } else {
-            mainWindow.show();
-          }
-        }
+        click: () => toggleMainWindow()
       },
       {
         label: 'Open TODO Markdown',
@@ -101,11 +96,23 @@ function createTray(): void {
       },
       { type: 'separator' },
       {
-        label: 'Quit',
+        label: 'Quit TOList Desktop Pet',
         click: () => app.quit()
       }
     ])
   );
+}
+
+function toggleMainWindow(): void {
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isVisible()) {
+    mainWindow.hide();
+    return;
+  }
+  mainWindow.show();
 }
 
 async function startTodoWatch(): Promise<void> {
@@ -223,6 +230,52 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
   menu.popup({ window: mainWindow, x: point?.x, y: point?.y });
 }
 
+function sendTodoMenuAction(action: TodoMenuAction): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.webContents.send('ui:todoAction', action);
+}
+
+function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoItem }): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  const { item, point } = payload;
+  const menu = Menu.buildFromTemplate([
+    {
+      label: item.completed ? 'Mark Active' : 'Mark Done',
+      click: () => sendTodoMenuAction({ type: 'toggle-completed', id: item.id })
+    },
+    {
+      label: item.highlighted ? 'Unmark Red' : 'Mark Red',
+      click: () => sendTodoMenuAction({ type: 'toggle-highlighted', id: item.id })
+    },
+    {
+      label: 'Adjust Priority',
+      enabled: !item.completed,
+      submenu: [
+        {
+          label: 'Move Up',
+          click: () => sendTodoMenuAction({ type: 'move-up', id: item.id })
+        },
+        {
+          label: 'Move Down',
+          click: () => sendTodoMenuAction({ type: 'move-down', id: item.id })
+        }
+      ]
+    },
+    { type: 'separator' },
+    {
+      label: 'Delete',
+      click: () => sendTodoMenuAction({ type: 'delete', id: item.id })
+    }
+  ]);
+
+  menu.popup({ window: mainWindow, x: point?.x, y: point?.y });
+}
+
 function registerPetProtocol(): void {
   protocol.handle('todolist-pet', async (request) => {
     const id = decodeURIComponent(new URL(request.url).hostname);
@@ -275,6 +328,9 @@ function registerIpc(): void {
     return importPetZip(zipPath);
   });
   ipcMain.handle('ui:showPetMenu', async (_event, point?: { x: number; y: number }) => showPetMenu(point));
+  ipcMain.handle('ui:showTodoMenu', (_event, payload: { point?: { x: number; y: number }; item: TodoItem }) =>
+    showTodoMenu(payload)
+  );
 
   ipcMain.handle('window:moveBy', (event, deltaX: number, deltaY: number) => {
     const window = BrowserWindow.fromWebContents(event.sender);

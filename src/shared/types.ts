@@ -8,6 +8,18 @@ export type TodoItem = {
   sourceLine: number;
 };
 
+export type TodoMenuActionType =
+  | 'toggle-completed'
+  | 'toggle-highlighted'
+  | 'delete'
+  | 'move-up'
+  | 'move-down';
+
+export type TodoMenuAction = {
+  type: TodoMenuActionType;
+  id: string;
+};
+
 export type PetSource = 'app' | 'codex' | 'npm';
 
 export type PetPackage = {
