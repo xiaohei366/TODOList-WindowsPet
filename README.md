@@ -14,9 +14,10 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Markdown-backed TODO storage at `%USERPROFILE%\Documents\TOList\todos.md`.
 - Human-readable TODO hierarchy: year, month, day.
 - Floating TODO panel above the pet, with up to three visible items and scroll support.
+- Visible system tray icon with Show / Hide, Open TODO Markdown, and quick Quit actions.
 - Right-click actions for adding TODOs, opening the Markdown source file, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
-- Right-click TODO actions for marking done, deleting, and toggling the `[!]` red marker.
-- Long-press TODO sorting within the same day.
+- Right-click TODO actions use a native menu for marking done, deleting, toggling the `[!]` red marker, and `Adjust Priority > Move Up / Move Down`.
+- Long-press TODO sorting within the same day is still supported for direct drag ordering.
 - Completed TODOs are rendered with strikethrough and moved to the end of the day.
 - Pet state changes based on TODO state: `review` for active TODOs, `idle` when clear, `waving` after adding, and directional running while dragging.
 

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { PetPackage, TodoItem } from '../shared/types';
+import type { PetPackage, TodoItem, TodoMenuAction } from '../shared/types';
 
 type Listener<T> = (payload: T) => void;
 
@@ -31,8 +31,11 @@ contextBridge.exposeInMainWorld('todoPet', {
   },
   ui: {
     showPetMenu: (point: { x: number; y: number }): Promise<void> => ipcRenderer.invoke('ui:showPetMenu', point),
+    showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }): Promise<void> =>
+      ipcRenderer.invoke('ui:showTodoMenu', payload),
     onOpenComposer: (listener: Listener<void>): (() => void) => onPayload('ui:openComposer', listener),
-    onSelectPet: (listener: Listener<string>): (() => void) => onPayload('ui:selectPet', listener)
+    onSelectPet: (listener: Listener<string>): (() => void) => onPayload('ui:selectPet', listener),
+    onTodoAction: (listener: Listener<TodoMenuAction>): (() => void) => onPayload('ui:todoAction', listener)
   },
   window: {
     moveBy: (deltaX: number, deltaY: number): Promise<void> => ipcRenderer.invoke('window:moveBy', deltaX, deltaY),

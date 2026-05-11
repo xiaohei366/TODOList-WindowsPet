@@ -1,21 +1,8 @@
-import {
-  Check,
-  Circle,
-  Flag,
-  ListOrdered,
-  Plus,
-  ArrowDown,
-  ArrowUp,
-  Trash2,
-  X
-} from 'lucide-react';
-import { FormEvent, PointerEvent, ReactElement, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import type { PetPackage, PetState, TodoItem } from '../../shared/types';
+import { Check, Circle, Plus, X } from 'lucide-react';
+import { FormEvent, PointerEvent, ReactElement, useEffect, useMemo, useRef, useState } from 'react';
+import type { PetPackage, PetState, TodoItem, TodoMenuAction } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
-
-type MenuPoint = { x: number; y: number };
-type TaskMenu = MenuPoint & { item: TodoItem };
 
 const selectedPetStorageKey = 'tolist:selected-pet';
 
@@ -23,7 +10,6 @@ export function App(): ReactElement {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [pets, setPets] = useState<PetPackage[]>([]);
   const [selectedPetId, setSelectedPetId] = useState<string>(() => localStorage.getItem(selectedPetStorageKey) ?? '');
-  const [taskMenu, setTaskMenu] = useState<TaskMenu | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
@@ -59,6 +45,13 @@ export function App(): ReactElement {
       offSelectPet();
     };
   }, [selectedPetId]);
+
+  useEffect(() => {
+    const offTodoAction = window.todoPet.ui.onTodoAction(handleTodoMenuAction);
+    return () => {
+      offTodoAction();
+    };
+  }, [todos]);
 
   useEffect(() => {
     if (!draggingTodo) {
@@ -142,13 +135,38 @@ export function App(): ReactElement {
 
   function openPetMenu(event: React.MouseEvent): void {
     event.preventDefault();
-    setTaskMenu(null);
     void window.todoPet.ui.showPetMenu({ x: Math.round(event.clientX), y: Math.round(event.clientY) });
   }
 
   function openTaskMenu(event: React.MouseEvent, item: TodoItem): void {
     event.preventDefault();
-    setTaskMenu({ x: event.clientX, y: event.clientY, item });
+    void window.todoPet.ui.showTodoMenu({
+      point: { x: Math.round(event.clientX), y: Math.round(event.clientY) },
+      item
+    });
+  }
+
+  function handleTodoMenuAction(action: TodoMenuAction): void {
+    const item = todos.find((todo) => todo.id === action.id);
+    if (!item) {
+      return;
+    }
+
+    if (action.type === 'toggle-completed') {
+      void window.todoPet.todos.setCompleted(item.id, !item.completed);
+      return;
+    }
+    if (action.type === 'toggle-highlighted') {
+      void window.todoPet.todos.setHighlighted(item.id, !item.highlighted);
+      return;
+    }
+    if (action.type === 'delete') {
+      void window.todoPet.todos.delete(item.id);
+      return;
+    }
+    if (action.type === 'move-up' || action.type === 'move-down') {
+      applyPriorityStep(item, action.type === 'move-up' ? 'up' : 'down');
+    }
   }
 
   function startTodoPress(event: PointerEvent, item: TodoItem): void {
@@ -198,7 +216,6 @@ export function App(): ReactElement {
       return;
     }
     setTodos(next);
-    setTaskMenu(null);
     const activeIds = next.filter((todo) => todo.date === item.date && !todo.completed).map((todo) => todo.id);
     void window.todoPet.todos.reorder(item.date, activeIds).then(setTodos);
   }
@@ -213,7 +230,7 @@ export function App(): ReactElement {
   }
 
   return (
-    <main className="pet-stage" onClick={() => setTaskMenu(null)}>
+    <main className="pet-stage">
       <section className="todo-panel" aria-label="TODO list">
         <div className="todo-panel__top">
           <span className="todo-panel__title">TODO</span>
@@ -286,32 +303,6 @@ export function App(): ReactElement {
         {selectedPet ? <PetSprite pet={selectedPet} state={petState} /> : <div className="pet-placeholder">PET</div>}
       </div>
 
-      {taskMenu ? (
-        <ContextMenu point={taskMenu}>
-          <button onClick={() => void window.todoPet.todos.setCompleted(taskMenu.item.id, !taskMenu.item.completed)}>
-            <Check size={15} /> {taskMenu.item.completed ? 'Mark Active' : 'Mark Done'}
-          </button>
-          <button onClick={() => void window.todoPet.todos.setHighlighted(taskMenu.item.id, !taskMenu.item.highlighted)}>
-            <Flag size={15} /> {taskMenu.item.highlighted ? 'Unmark Red' : 'Mark Red'}
-          </button>
-          <div className="menu-submenu">
-            <button>
-              <ListOrdered size={15} /> Adjust Priority
-            </button>
-            <div className="context-submenu-panel">
-              <button onClick={() => applyPriorityStep(taskMenu.item, 'up')}>
-                <ArrowUp size={15} /> Move Up
-              </button>
-              <button onClick={() => applyPriorityStep(taskMenu.item, 'down')}>
-                <ArrowDown size={15} /> Move Down
-              </button>
-            </div>
-          </div>
-          <button className="danger" onClick={() => void window.todoPet.todos.delete(taskMenu.item.id)}>
-            <Trash2 size={15} /> Delete
-          </button>
-        </ContextMenu>
-      ) : null}
     </main>
   );
 }
@@ -325,14 +316,6 @@ function PetSprite({ pet, state }: { pet: PetPackage; state: PetState }): ReactE
       title={pet.displayName}
       style={getPetSpriteStyle(state, frame, pet.spritesheetUrl ?? '')}
     />
-  );
-}
-
-function ContextMenu({ children, point }: { children: ReactNode; point: MenuPoint }): ReactElement {
-  return (
-    <nav className="context-menu" style={{ left: point.x, top: point.y }} onClick={(event) => event.stopPropagation()}>
-      {children}
-    </nav>
   );
 }
 
