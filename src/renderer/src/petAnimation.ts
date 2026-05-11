@@ -6,6 +6,7 @@ const codexAtlasWidth = 1536;
 const codexAtlasHeight = 1872;
 const petRenderScale = 0.5;
 const desktopPetPlaybackScale = 1.6;
+const idlePlaybackScale = 2.4;
 
 export type PetSpriteStyle = {
   width: number;
@@ -83,7 +84,9 @@ const animationSpecs = Object.fromEntries(
     state,
     {
       ...spec,
-      durations: spec.durations.map((duration) => Math.round(duration * desktopPetPlaybackScale))
+      durations: spec.durations.map((duration) =>
+        Math.round(duration * (state === 'idle' ? idlePlaybackScale : desktopPetPlaybackScale))
+      )
     }
   ])
 ) as Record<PetState, AnimationSpec>;

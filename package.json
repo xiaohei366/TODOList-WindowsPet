@@ -8,7 +8,9 @@
     "dev": "electron-vite dev",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && electron-vite build && electron-builder --win --dir --publish never"
+    "clean": "node -e \"require('node:fs').rmSync('release',{recursive:true,force:true})\"",
+    "clean:release": "node -e \"const fs=require('node:fs'),path=require('node:path');if(fs.existsSync('release')){for(const name of fs.readdirSync('release')){if(!name.endsWith('.exe'))fs.rmSync(path.join('release',name),{recursive:true,force:true});}}\"",
+    "build": "npm run clean && npm run typecheck && electron-vite build && electron-builder --win portable --publish never && npm run clean:release"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",
@@ -38,13 +40,14 @@
     "directories": {
       "output": "release"
     },
+    "artifactName": "TOList-Desktop-Pet-${version}.${ext}",
     "files": [
       "out/**/*",
       "package.json"
     ],
     "win": {
       "target": [
-        "dir"
+        "portable"
       ]
     }
   }
