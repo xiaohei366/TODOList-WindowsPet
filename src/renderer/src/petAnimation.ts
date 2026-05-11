@@ -5,6 +5,7 @@ const codexCellHeight = 208;
 const codexAtlasWidth = 1536;
 const codexAtlasHeight = 1872;
 const petRenderScale = 0.5;
+const desktopPetPlaybackScale = 1.6;
 
 export type PetSpriteStyle = {
   width: number;
@@ -20,7 +21,7 @@ export type InteractivePetStateInput = {
   dragDirection?: 'left' | 'right';
 };
 
-const animationSpecs: Record<PetState, AnimationSpec> = {
+const codexAnimationSpecs: Record<PetState, AnimationSpec> = {
   idle: {
     state: 'idle',
     row: 0,
@@ -76,6 +77,16 @@ const animationSpecs: Record<PetState, AnimationSpec> = {
     durations: [150, 150, 150, 150, 150, 280]
   }
 };
+
+const animationSpecs = Object.fromEntries(
+  Object.entries(codexAnimationSpecs).map(([state, spec]) => [
+    state,
+    {
+      ...spec,
+      durations: spec.durations.map((duration) => Math.round(duration * desktopPetPlaybackScale))
+    }
+  ])
+) as Record<PetState, AnimationSpec>;
 
 export function getAnimationSpec(state: PetState): AnimationSpec {
   return animationSpecs[state];

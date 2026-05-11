@@ -33,7 +33,7 @@ contextBridge.exposeInMainWorld('todoPet', {
     showPetMenu: (point: { x: number; y: number }): Promise<void> => ipcRenderer.invoke('ui:showPetMenu', point),
     showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }): Promise<void> =>
       ipcRenderer.invoke('ui:showTodoMenu', payload),
-    onOpenComposer: (listener: Listener<void>): (() => void) => onPayload('ui:openComposer', listener),
+    onToggleTodoPanel: (listener: Listener<void>): (() => void) => onPayload('ui:toggleTodoPanel', listener),
     onSelectPet: (listener: Listener<string>): (() => void) => onPayload('ui:selectPet', listener),
     onTodoAction: (listener: Listener<TodoMenuAction>): (() => void) => onPayload('ui:todoAction', listener)
   },

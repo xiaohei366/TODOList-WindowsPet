@@ -15,11 +15,12 @@
 - Markdown 使用年、月、日三级标题组织，适合直接手写和阅读。
 - 宠物头顶显示 TODO 面板，最多可见三条，超出后在面板内滚动。
 - 系统托盘会显示可见图标，支持显示/隐藏窗口、打开 TODO Markdown 和快速退出。
-- 右键宠物可新增 TODO、打开 Markdown 源文件、导入宠物 zip、刷新宠物、切换宠物样式和退出。
+- 右键宠物可显示或隐藏 TODO 面板、打开 Markdown 源文件、导入宠物 zip、刷新宠物、切换宠物样式和退出。
 - 右键 TODO 使用原生菜单，可标记完成、删除、标红或取消标红，并通过 `Adjust Priority > Move Up / Move Down` 调整优先级。
 - 长按 TODO 仍可在同一天内拖拽排序。
 - TODO 完成后会划线并移动到当天列表末尾。
-- 宠物状态会跟随 TODO 状态切换：有未完成 TODO 时为 `review`，清空后为 `idle`，新增后短暂 `waving`，拖拽时根据方向显示 `running-left` 或 `running-right`。
+- 宠物状态会跟随 TODO 状态切换：有未完成 TODO 时为 `review`，清空后为 `idle`，鼠标悬停或新增后短暂 `waving`，拖拽时根据方向显示 `running-left` 或 `running-right`。
+- 宠物动画保持 Codex 兼容的状态行和帧数，但播放节奏更慢，更适合桌面常驻。
 
 ## 环境要求
 

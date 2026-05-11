@@ -194,8 +194,8 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
       : [{ label: 'No pets found', enabled: false }];
   const menu = Menu.buildFromTemplate([
     {
-      label: 'Add TODO',
-      click: () => mainWindow?.webContents.send('ui:openComposer')
+      label: 'Show / Hide TODO Panel',
+      click: () => mainWindow?.webContents.send('ui:toggleTodoPanel')
     },
     {
       label: 'Open Markdown',
