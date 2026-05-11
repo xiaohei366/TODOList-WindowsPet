@@ -14,6 +14,12 @@ export type PetSpriteStyle = {
   backgroundPosition: string;
 };
 
+export type InteractivePetStateInput = {
+  baseState: PetState;
+  isHovered: boolean;
+  dragDirection?: 'left' | 'right';
+};
+
 const animationSpecs: Record<PetState, AnimationSpec> = {
   idle: {
     state: 'idle',
@@ -77,6 +83,19 @@ export function getAnimationSpec(state: PetState): AnimationSpec {
 
 export function getTodoDrivenPetState(items: TodoItem[]): PetState {
   return items.some((item) => !item.completed) ? 'review' : 'idle';
+}
+
+export function getInteractivePetState(input: InteractivePetStateInput): PetState {
+  if (input.dragDirection === 'left') {
+    return 'running-left';
+  }
+  if (input.dragDirection === 'right') {
+    return 'running-right';
+  }
+  if (input.isHovered) {
+    return 'waving';
+  }
+  return input.baseState;
 }
 
 export function getPetSpriteStyle(state: PetState, frame: number, spritesheetUrl: string): PetSpriteStyle {
