@@ -43,9 +43,11 @@
     "artifactName": "TOList-Desktop-Pet-${version}.${ext}",
     "files": [
       "out/**/*",
+      "build/**/*",
       "package.json"
     ],
     "win": {
+      "icon": "build/icon.png",
       "target": [
         "portable"
       ]

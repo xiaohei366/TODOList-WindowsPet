@@ -40,7 +40,7 @@ button {
 .todo-panel {
   position: absolute;
   left: 50%;
-  top: 72px;
+  bottom: 150px;
   z-index: 4;
   width: 304px;
   max-width: calc(100% - 28px);

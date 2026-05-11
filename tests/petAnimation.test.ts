@@ -23,7 +23,7 @@ describe('petAnimation helpers', () => {
   });
 
   test('plays idle animation more slowly than active states', () => {
-    expect(getAnimationSpec('idle').durations).toEqual([672, 264, 264, 336, 336, 768]);
+    expect(getAnimationSpec('idle').durations).toEqual([1344, 528, 528, 672, 672, 1536]);
     expect(getAnimationSpec('review').durations).toEqual([240, 240, 240, 240, 240, 448]);
   });
 
