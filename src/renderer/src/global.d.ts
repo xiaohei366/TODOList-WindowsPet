@@ -21,7 +21,7 @@ declare global {
         onChanged: (listener: (pets: PetPackage[]) => void) => () => void;
       };
       ui: {
-        showPetMenu: () => Promise<void>;
+        showPetMenu: (point: { x: number; y: number }) => Promise<void>;
         onOpenComposer: (listener: () => void) => () => void;
         onSelectPet: (listener: (id: string) => void) => () => void;
       };

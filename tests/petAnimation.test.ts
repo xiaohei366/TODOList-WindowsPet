@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { getAnimationSpec, getPetSpriteStyle, getTodoDrivenPetState } from '../src/renderer/src/petAnimation';
+import {
+  getAnimationSpec,
+  getInteractivePetState,
+  getPetSpriteStyle,
+  getTodoDrivenPetState
+} from '../src/renderer/src/petAnimation';
 import type { TodoItem } from '../src/shared/types';
 
 describe('petAnimation helpers', () => {
@@ -50,5 +55,13 @@ describe('petAnimation helpers', () => {
     ];
 
     expect(getTodoDrivenPetState(items)).toBe('idle');
+  });
+
+  test('uses waving while hovered and keeps drag direction as the highest priority state', () => {
+    expect(getInteractivePetState({ baseState: 'review', isHovered: true })).toBe('waving');
+    expect(getInteractivePetState({ baseState: 'review', isHovered: true, dragDirection: 'left' })).toBe(
+      'running-left'
+    );
+    expect(getInteractivePetState({ baseState: 'idle', isHovered: false })).toBe('idle');
   });
 });

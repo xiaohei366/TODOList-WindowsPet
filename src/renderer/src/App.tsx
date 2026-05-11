@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { FormEvent, PointerEvent, ReactElement, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { PetPackage, PetState, TodoItem } from '../../shared/types';
-import { getAnimationSpec, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
+import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 
 type MenuPoint = { x: number; y: number };
 type TaskMenu = MenuPoint & { item: TodoItem };
@@ -24,6 +24,7 @@ export function App(): ReactElement {
   const [newTodoText, setNewTodoText] = useState('');
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
   const [draggingWindow, setDraggingWindow] = useState(false);
+  const [petHovered, setPetHovered] = useState(false);
   const [transientState, setTransientState] = useState<PetState | null>(null);
   const longPressTimer = useRef<number | undefined>(undefined);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
@@ -107,7 +108,13 @@ export function App(): ReactElement {
     () => pets.find((pet) => pet.id === selectedPetId) ?? pets[0],
     [pets, selectedPetId]
   );
-  const petState = transientState ?? getTodoDrivenPetState(todos);
+  const basePetState = getTodoDrivenPetState(todos);
+  const petState =
+    transientState ??
+    getInteractivePetState({
+      baseState: basePetState,
+      isHovered: petHovered
+    });
 
   function selectPet(id: string): void {
     setSelectedPetId(id);
@@ -131,7 +138,7 @@ export function App(): ReactElement {
   function openPetMenu(event: React.MouseEvent): void {
     event.preventDefault();
     setTaskMenu(null);
-    void window.todoPet.ui.showPetMenu();
+    void window.todoPet.ui.showPetMenu({ x: Math.round(event.clientX), y: Math.round(event.clientY) });
   }
 
   function openTaskMenu(event: React.MouseEvent, item: TodoItem): void {
@@ -233,7 +240,13 @@ export function App(): ReactElement {
         </div>
       </section>
 
-      <div className="pet-anchor" onContextMenu={openPetMenu} onPointerDown={startWindowDrag}>
+      <div
+        className="pet-anchor"
+        onContextMenu={openPetMenu}
+        onPointerDown={startWindowDrag}
+        onPointerEnter={() => setPetHovered(true)}
+        onPointerLeave={() => setPetHovered(false)}
+      >
         {selectedPet ? <PetSprite pet={selectedPet} state={petState} /> : <div className="pet-placeholder">PET</div>}
       </div>
 
