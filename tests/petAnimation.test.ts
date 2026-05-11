@@ -1,0 +1,45 @@
+import { describe, expect, test } from 'vitest';
+import { getAnimationSpec, getTodoDrivenPetState } from '../src/renderer/src/petAnimation';
+import type { TodoItem } from '../src/shared/types';
+
+describe('petAnimation helpers', () => {
+  test('uses Codex atlas row and duration metadata for review state', () => {
+    expect(getAnimationSpec('review')).toMatchObject({
+      row: 8,
+      frameCount: 6,
+      durations: [150, 150, 150, 150, 150, 280]
+    });
+  });
+
+  test('switches to review when overdue or today active todos exist', () => {
+    const items: TodoItem[] = [
+      {
+        id: '1',
+        date: '2026-05-10',
+        text: 'Pay bill',
+        completed: false,
+        highlighted: false,
+        overdue: true,
+        sourceLine: 4
+      }
+    ];
+
+    expect(getTodoDrivenPetState(items)).toBe('review');
+  });
+
+  test('switches to idle when all visible todos are complete', () => {
+    const items: TodoItem[] = [
+      {
+        id: '1',
+        date: '2026-05-11',
+        text: 'Done',
+        completed: true,
+        highlighted: false,
+        overdue: false,
+        sourceLine: 4
+      }
+    ];
+
+    expect(getTodoDrivenPetState(items)).toBe('idle');
+  });
+});

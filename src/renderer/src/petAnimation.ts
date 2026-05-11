@@ -1,0 +1,66 @@
+import type { AnimationSpec, PetState, TodoItem } from '../../shared/types';
+
+const animationSpecs: Record<PetState, AnimationSpec> = {
+  idle: {
+    state: 'idle',
+    row: 0,
+    frameCount: 6,
+    durations: [280, 110, 110, 140, 140, 320]
+  },
+  'running-right': {
+    state: 'running-right',
+    row: 1,
+    frameCount: 8,
+    durations: [120, 120, 120, 120, 120, 120, 120, 220]
+  },
+  'running-left': {
+    state: 'running-left',
+    row: 2,
+    frameCount: 8,
+    durations: [120, 120, 120, 120, 120, 120, 120, 220]
+  },
+  waving: {
+    state: 'waving',
+    row: 3,
+    frameCount: 4,
+    durations: [140, 140, 140, 280]
+  },
+  jumping: {
+    state: 'jumping',
+    row: 4,
+    frameCount: 5,
+    durations: [140, 140, 140, 140, 280]
+  },
+  failed: {
+    state: 'failed',
+    row: 5,
+    frameCount: 8,
+    durations: [140, 140, 140, 140, 140, 140, 140, 240]
+  },
+  waiting: {
+    state: 'waiting',
+    row: 6,
+    frameCount: 6,
+    durations: [150, 150, 150, 150, 150, 260]
+  },
+  running: {
+    state: 'running',
+    row: 7,
+    frameCount: 6,
+    durations: [120, 120, 120, 120, 120, 220]
+  },
+  review: {
+    state: 'review',
+    row: 8,
+    frameCount: 6,
+    durations: [150, 150, 150, 150, 150, 280]
+  }
+};
+
+export function getAnimationSpec(state: PetState): AnimationSpec {
+  return animationSpecs[state];
+}
+
+export function getTodoDrivenPetState(items: TodoItem[]): PetState {
+  return items.some((item) => !item.completed) ? 'review' : 'idle';
+}
