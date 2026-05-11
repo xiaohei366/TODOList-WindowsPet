@@ -191,10 +191,10 @@ button {
 .pet-anchor {
   position: absolute;
   left: 50%;
-  bottom: 10px;
+  bottom: 38px;
   z-index: 2;
-  width: 192px;
-  height: 208px;
+  width: 96px;
+  height: 104px;
   transform: translateX(-50%);
   cursor: grab;
   touch-action: none;
@@ -205,19 +205,15 @@ button {
 }
 
 .pet-sprite {
-  width: 192px;
-  height: 208px;
   background-repeat: no-repeat;
-  background-size: 1536px 1872px;
   image-rendering: pixelated;
-  filter: drop-shadow(0 18px 16px rgba(27, 37, 34, 0.2));
+  filter: drop-shadow(0 10px 10px rgba(27, 37, 34, 0.2));
 }
 
 .pet-placeholder {
   display: grid;
-  width: 160px;
-  height: 160px;
-  margin: 32px auto 0;
+  width: 96px;
+  height: 96px;
   place-items: center;
   border: 2px solid #30423a;
   border-radius: 8px;

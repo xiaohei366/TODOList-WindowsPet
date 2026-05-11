@@ -20,6 +20,11 @@ declare global {
         reload: () => Promise<PetPackage[]>;
         onChanged: (listener: (pets: PetPackage[]) => void) => () => void;
       };
+      ui: {
+        showPetMenu: () => Promise<void>;
+        onOpenComposer: (listener: () => void) => () => void;
+        onSelectPet: (listener: (id: string) => void) => () => void;
+      };
       window: {
         moveBy: (deltaX: number, deltaY: number) => Promise<void>;
         quit: () => Promise<void>;

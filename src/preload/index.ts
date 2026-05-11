@@ -29,6 +29,11 @@ contextBridge.exposeInMainWorld('todoPet', {
     reload: (): Promise<PetPackage[]> => ipcRenderer.invoke('pets:reload'),
     onChanged: (listener: Listener<PetPackage[]>): (() => void) => onPayload('pets:changed', listener)
   },
+  ui: {
+    showPetMenu: (): Promise<void> => ipcRenderer.invoke('ui:showPetMenu'),
+    onOpenComposer: (listener: Listener<void>): (() => void) => onPayload('ui:openComposer', listener),
+    onSelectPet: (listener: Listener<string>): (() => void) => onPayload('ui:selectPet', listener)
+  },
   window: {
     moveBy: (deltaX: number, deltaY: number): Promise<void> => ipcRenderer.invoke('window:moveBy', deltaX, deltaY),
     quit: (): Promise<void> => ipcRenderer.invoke('window:quit')

@@ -2,17 +2,13 @@ import {
   Check,
   Circle,
   Flag,
-  FolderOpen,
-  PackagePlus,
   Plus,
-  Power,
-  RefreshCw,
   Trash2,
   X
 } from 'lucide-react';
 import { FormEvent, PointerEvent, ReactElement, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { PetPackage, PetState, TodoItem } from '../../shared/types';
-import { getAnimationSpec, getTodoDrivenPetState } from './petAnimation';
+import { getAnimationSpec, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 
 type MenuPoint = { x: number; y: number };
 type TaskMenu = MenuPoint & { item: TodoItem };
@@ -23,7 +19,6 @@ export function App(): ReactElement {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [pets, setPets] = useState<PetPackage[]>([]);
   const [selectedPetId, setSelectedPetId] = useState<string>(() => localStorage.getItem(selectedPetStorageKey) ?? '');
-  const [petMenu, setPetMenu] = useState<MenuPoint | null>(null);
   const [taskMenu, setTaskMenu] = useState<TaskMenu | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
@@ -49,9 +44,13 @@ export function App(): ReactElement {
         selectPet(loadedPets[0].id);
       }
     });
+    const offOpenComposer = window.todoPet.ui.onOpenComposer(() => setComposerOpen(true));
+    const offSelectPet = window.todoPet.ui.onSelectPet((id) => selectPet(id));
     return () => {
       offTodos();
       offPets();
+      offOpenComposer();
+      offSelectPet();
     };
   }, [selectedPetId]);
 
@@ -132,12 +131,11 @@ export function App(): ReactElement {
   function openPetMenu(event: React.MouseEvent): void {
     event.preventDefault();
     setTaskMenu(null);
-    setPetMenu({ x: event.clientX, y: event.clientY });
+    void window.todoPet.ui.showPetMenu();
   }
 
   function openTaskMenu(event: React.MouseEvent, item: TodoItem): void {
     event.preventDefault();
-    setPetMenu(null);
     setTaskMenu({ x: event.clientX, y: event.clientY, item });
   }
 
@@ -172,7 +170,7 @@ export function App(): ReactElement {
   }
 
   return (
-    <main className="pet-stage" onClick={() => { setPetMenu(null); setTaskMenu(null); }}>
+    <main className="pet-stage" onClick={() => setTaskMenu(null)}>
       <section className="todo-panel" aria-label="TODO list">
         <div className="todo-panel__top">
           <span className="todo-panel__title">TODO</span>
@@ -239,31 +237,6 @@ export function App(): ReactElement {
         {selectedPet ? <PetSprite pet={selectedPet} state={petState} /> : <div className="pet-placeholder">PET</div>}
       </div>
 
-      {petMenu ? (
-        <ContextMenu point={petMenu}>
-          <button onClick={() => { setComposerOpen(true); setPetMenu(null); }}>
-            <Plus size={15} /> Add TODO
-          </button>
-          <button onClick={() => void window.todoPet.todos.openSource()}>
-            <FolderOpen size={15} /> Open Markdown
-          </button>
-          <button onClick={() => void window.todoPet.pets.importZip()}>
-            <PackagePlus size={15} /> Import Pet Zip
-          </button>
-          <button onClick={() => void window.todoPet.pets.reload().then(setPets)}>
-            <RefreshCw size={15} /> Refresh Pets
-          </button>
-          {pets.map((pet) => (
-            <button key={pet.id} onClick={() => { selectPet(pet.id); setPetMenu(null); }}>
-              <Flag size={15} /> {pet.displayName}
-            </button>
-          ))}
-          <button onClick={() => void window.todoPet.window.quit()}>
-            <Power size={15} /> Quit
-          </button>
-        </ContextMenu>
-      ) : null}
-
       {taskMenu ? (
         <ContextMenu point={taskMenu}>
           <button onClick={() => void window.todoPet.todos.setCompleted(taskMenu.item.id, !taskMenu.item.completed)}>
@@ -283,16 +256,12 @@ export function App(): ReactElement {
 
 function PetSprite({ pet, state }: { pet: PetPackage; state: PetState }): ReactElement {
   const frame = useAnimationFrame(state);
-  const spec = getAnimationSpec(state);
 
   return (
     <div
       className="pet-sprite"
       title={pet.displayName}
-      style={{
-        backgroundImage: `url("${pet.spritesheetUrl}")`,
-        backgroundPosition: `-${frame * 192}px -${spec.row * 208}px`
-      }}
+      style={getPetSpriteStyle(state, frame, pet.spritesheetUrl ?? '')}
     />
   );
 }

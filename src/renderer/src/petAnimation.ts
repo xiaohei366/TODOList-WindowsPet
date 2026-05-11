@@ -1,5 +1,19 @@
 import type { AnimationSpec, PetState, TodoItem } from '../../shared/types';
 
+const codexCellWidth = 192;
+const codexCellHeight = 208;
+const codexAtlasWidth = 1536;
+const codexAtlasHeight = 1872;
+const petRenderScale = 0.5;
+
+export type PetSpriteStyle = {
+  width: number;
+  height: number;
+  backgroundImage: string;
+  backgroundSize: string;
+  backgroundPosition: string;
+};
+
 const animationSpecs: Record<PetState, AnimationSpec> = {
   idle: {
     state: 'idle',
@@ -63,4 +77,18 @@ export function getAnimationSpec(state: PetState): AnimationSpec {
 
 export function getTodoDrivenPetState(items: TodoItem[]): PetState {
   return items.some((item) => !item.completed) ? 'review' : 'idle';
+}
+
+export function getPetSpriteStyle(state: PetState, frame: number, spritesheetUrl: string): PetSpriteStyle {
+  const spec = getAnimationSpec(state);
+  const scaledCellWidth = codexCellWidth * petRenderScale;
+  const scaledCellHeight = codexCellHeight * petRenderScale;
+
+  return {
+    width: scaledCellWidth,
+    height: scaledCellHeight,
+    backgroundImage: `url("${spritesheetUrl}")`,
+    backgroundSize: `${codexAtlasWidth * petRenderScale}px ${codexAtlasHeight * petRenderScale}px`,
+    backgroundPosition: `-${frame * scaledCellWidth}px -${spec.row * scaledCellHeight}px`
+  };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getAnimationSpec, getTodoDrivenPetState } from '../src/renderer/src/petAnimation';
+import { getAnimationSpec, getPetSpriteStyle, getTodoDrivenPetState } from '../src/renderer/src/petAnimation';
 import type { TodoItem } from '../src/shared/types';
 
 describe('petAnimation helpers', () => {
@@ -8,6 +8,15 @@ describe('petAnimation helpers', () => {
       row: 8,
       frameCount: 6,
       durations: [150, 150, 150, 150, 150, 280]
+    });
+  });
+
+  test('renders Codex pet cells at half visual size while preserving atlas offsets', () => {
+    expect(getPetSpriteStyle('review', 2, 'todolist-pet://demo/spritesheet.webp')).toMatchObject({
+      width: 96,
+      height: 104,
+      backgroundSize: '768px 936px',
+      backgroundPosition: '-192px -832px'
     });
   });
 
