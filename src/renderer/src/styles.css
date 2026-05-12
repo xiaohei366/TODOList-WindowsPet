@@ -56,18 +56,45 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   min-height: 34px;
   padding: 6px 8px 4px 12px;
 }
 
+.todo-panel__heading {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .todo-panel__title {
+  flex: 0 0 auto;
   color: #30423a;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
 }
 
+.todo-panel__streak {
+  min-width: 0;
+  overflow: hidden;
+  color: #287a61;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #287a61 0%, #d6a419 48%, #2e6be6 100%);
+  background-clip: text;
+  filter: drop-shadow(0 3px 8px rgba(214, 164, 25, 0.28));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .icon-button {
+  flex: 0 0 auto;
   display: inline-grid;
   width: 28px;
   height: 28px;

@@ -3,6 +3,7 @@ import { FormEvent, PointerEvent, ReactElement, useEffect, useMemo, useRef, useS
 import type { PetPackage, PetState, TodoItem, TodoMenuAction } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
+import { countCompletedToday, formatLocalDateKey } from './todoStats';
 
 const selectedPetStorageKey = 'tolist:selected-pet';
 
@@ -110,6 +111,7 @@ export function App(): ReactElement {
     () => pets.find((pet) => pet.id === selectedPetId) ?? pets[0],
     [pets, selectedPetId]
   );
+  const completedTodayCount = countCompletedToday(todos, formatLocalDateKey(new Date()));
   const basePetState = getTodoDrivenPetState(todos);
   const petState =
     transientState ??
@@ -238,7 +240,10 @@ export function App(): ReactElement {
       {todoPanelVisible ? (
         <section className="todo-panel" aria-label="TODO list">
           <div className="todo-panel__top">
-            <span className="todo-panel__title">TODO</span>
+            <div className="todo-panel__heading">
+              <span className="todo-panel__title">TODO</span>
+              <span className="todo-panel__streak">今日已完成 {completedTodayCount} 个任务</span>
+            </div>
             <button className="icon-button" title="Add TODO" onClick={() => setComposerOpen(true)}>
               <Plus size={16} />
             </button>
