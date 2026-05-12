@@ -14,6 +14,7 @@
 - TODO 默认保存到 `%USERPROFILE%\Documents\TOList\todos.md`。
 - Markdown 使用年、月、日三级标题组织，适合直接手写和阅读。
 - 宠物头顶显示 TODO 面板，最多可见三条，超出后在面板内滚动。
+- TODO 标题栏会显示“今日已完成 X 个任务”的激励文字。
 - 系统托盘会显示可见图标，支持显示/隐藏窗口、打开 TODO Markdown 和快速退出。
 - 右键宠物可显示或隐藏 TODO 面板、打开 Markdown 源文件、导入宠物 zip、刷新宠物、切换宠物样式和退出。
 - 右键 TODO 使用原生菜单，可标记完成、删除、标红或取消标红，并通过 `Adjust Priority > Move Up / Move Down` 调整优先级。
