@@ -18,11 +18,11 @@ export function selectVisibleTodos(items: TodoItem[], todayKey: string): TodoIte
     ...item,
     overdue: !item.completed && item.date < todayKey
   }));
-  const overdue = withOverdue
-    .filter((item) => item.overdue)
-    .sort((left, right) => left.date.localeCompare(right.date) || left.sourceLine - right.sourceLine);
-  const today = withOverdue.filter((item) => item.date === todayKey);
-  return [...overdue, ...today];
+  const active = withOverdue
+    .filter((item) => !item.completed && (item.overdue || item.date === todayKey))
+    .sort((left, right) => compareVisibleActiveTodos(left, right, todayKey));
+  const completedToday = withOverdue.filter((item) => item.completed && item.date === todayKey);
+  return [...active, ...completedToday];
 }
 
 export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo[] {
@@ -56,6 +56,7 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
       text: parsed.text,
       completed,
       highlighted: parsed.highlighted,
+      displayOrder: parsed.displayOrder,
       overdue: !completed && currentDate < todayKey,
       sourceLine,
       order
@@ -163,6 +164,9 @@ export class TodoMarkdownStore {
     }
 
     const target = { ...items[index], completed };
+    if (completed) {
+      delete target.displayOrder;
+    }
     const next = items.filter((item) => item.id !== id);
     next.push(target);
     await this.writeItems(next);
@@ -191,6 +195,27 @@ export class TodoMarkdownStore {
     const missingActive = active.filter((item) => !ids.includes(item.id));
     const nextDay = [...reorderedActive, ...missingActive, ...completed];
     const next = [...items.filter((item) => item.date !== date), ...nextDay];
+
+    await this.writeItems(next);
+    return this.list();
+  }
+
+  async reorderVisible(ids: string[]): Promise<TodoItem[]> {
+    const todayKey = formatDateKey(this.clock());
+    const items = await this.readItems();
+    const activeVisible = selectVisibleTodos(items, todayKey).filter((item) => !item.completed);
+    const byId = new Map(activeVisible.map((item) => [item.id, item]));
+    const uniqueIds = Array.from(new Set(ids));
+    const ordered = uniqueIds.map((id) => byId.get(id)).filter((item): item is TodoItem => Boolean(item));
+    const missing = activeVisible.filter((item) => !uniqueIds.includes(item.id));
+    const nextOrderById = new Map([...ordered, ...missing].map((item, index) => [item.id, index + 1]));
+    const next = items.map((item) => {
+      const displayOrder = nextOrderById.get(item.id);
+      if (!displayOrder) {
+        return item;
+      }
+      return { ...item, displayOrder };
+    });
 
     await this.writeItems(next);
     return this.list();
@@ -243,27 +268,60 @@ export class TodoMarkdownStore {
   }
 }
 
-function parseTodoBody(rawBody: string, completed: boolean): { highlighted: boolean; text: string } {
+function parseTodoBody(rawBody: string, completed: boolean): { highlighted: boolean; displayOrder?: number; text: string } {
   let body = rawBody.trim();
   let highlighted = false;
+  let displayOrder: number | undefined;
 
-  if (/^\[!\](?:\s+|$)/.test(body)) {
-    highlighted = true;
-    body = body.replace(/^\[!\]\s*/, '');
+  let parsedMarker = true;
+  while (parsedMarker) {
+    parsedMarker = false;
+    if (/^\[!\](?:\s+|$)/.test(body)) {
+      highlighted = true;
+      body = body.replace(/^\[!\]\s*/, '');
+      parsedMarker = true;
+      continue;
+    }
+
+    const order = /^\[order:(\d+)\](?:\s+|$)/.exec(body);
+    if (order) {
+      displayOrder = Number(order[1]);
+      body = body.replace(/^\[order:\d+\]\s*/, '');
+      parsedMarker = true;
+    }
   }
 
   if (completed && body.startsWith('~~') && body.endsWith('~~') && body.length >= 4) {
     body = body.slice(2, -2);
   }
 
-  return { highlighted, text: body.trim() };
+  return { highlighted, displayOrder, text: body.trim() };
 }
 
 function formatTodoLine(item: TodoItem): string {
   const checkbox = item.completed ? 'x' : ' ';
+  const order = item.displayOrder && !item.completed ? `[order:${item.displayOrder}] ` : '';
   const marker = item.highlighted ? '[!] ' : '';
   const text = item.completed ? `~~${item.text}~~` : item.text;
-  return `- [${checkbox}] ${marker}${text}`;
+  return `- [${checkbox}] ${order}${marker}${text}`;
+}
+
+function compareVisibleActiveTodos(left: TodoItem, right: TodoItem, todayKey: string): number {
+  const leftOrder = left.displayOrder ?? Number.MAX_SAFE_INTEGER;
+  const rightOrder = right.displayOrder ?? Number.MAX_SAFE_INTEGER;
+  if (leftOrder !== rightOrder) {
+    return leftOrder - rightOrder;
+  }
+
+  const leftGroup = left.date < todayKey ? 0 : 1;
+  const rightGroup = right.date < todayKey ? 0 : 1;
+  if (leftGroup !== rightGroup) {
+    return leftGroup - rightGroup;
+  }
+  if (left.date !== right.date) {
+    return left.date.localeCompare(right.date);
+  }
+  return left.sourceLine - right.sourceLine;
 }
 
 function cleanTodoText(text: string): string {

@@ -10,6 +10,7 @@ declare global {
         setCompleted: (id: string, completed: boolean) => Promise<TodoItem>;
         setHighlighted: (id: string, highlighted: boolean) => Promise<TodoItem>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
+        reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
         openSource: () => Promise<void>;
         onChanged: (listener: (items: TodoItem[]) => void) => () => void;
       };

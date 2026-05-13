@@ -63,10 +63,8 @@ export function App(): ReactElement {
       return;
     }
     const stopDragging = (): void => {
-      const activeIds = todos
-        .filter((item) => item.date === draggingTodo.date && !item.completed)
-        .map((item) => item.id);
-      void window.todoPet.todos.reorder(draggingTodo.date, activeIds).then(setTodos);
+      const activeIds = todos.filter((item) => !item.completed).map((item) => item.id);
+      void window.todoPet.todos.reorderVisible(activeIds).then(setTodos);
       setDraggingTodo(null);
     };
     window.addEventListener('pointerup', stopDragging, { once: true });
@@ -210,7 +208,7 @@ export function App(): ReactElement {
   }
 
   function hoverTodo(item: TodoItem, placement: TodoPlacement): void {
-    if (!draggingTodo || item.id === draggingTodo.id || item.date !== draggingTodo.date || item.completed) {
+    if (!draggingTodo || item.id === draggingTodo.id || item.completed) {
       return;
     }
     setTodos((current) => moveTodoRelative(current, draggingTodo.id, item.id, placement));
@@ -222,8 +220,8 @@ export function App(): ReactElement {
       return;
     }
     setTodos(next);
-    const activeIds = next.filter((todo) => todo.date === item.date && !todo.completed).map((todo) => todo.id);
-    void window.todoPet.todos.reorder(item.date, activeIds).then(setTodos);
+    const activeIds = next.filter((todo) => !todo.completed).map((todo) => todo.id);
+    void window.todoPet.todos.reorderVisible(activeIds).then(setTodos);
   }
 
   function startWindowDrag(event: PointerEvent<HTMLDivElement>): void {

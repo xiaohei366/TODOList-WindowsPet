@@ -5,6 +5,7 @@ export type TodoItem = {
   completed: boolean;
   highlighted: boolean;
   overdue: boolean;
+  displayOrder?: number;
   sourceLine: number;
 };
 

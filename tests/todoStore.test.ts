@@ -103,6 +103,37 @@ describe('TodoMarkdownStore', () => {
     expect((await store.list()).map((item) => item.text)).toEqual(['Third', 'First', 'Second']);
   });
 
+  test('reorders visible active todos across overdue and today without changing dates', async () => {
+    await writeFile(
+      file,
+      [
+        '# 2026',
+        '',
+        '## 2026-05',
+        '',
+        '### 2026-05-10 Sunday',
+        '',
+        '- [ ] Yesterday',
+        '',
+        '### 2026-05-11 Monday',
+        '',
+        '- [ ] Today',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+    const store = new TodoMarkdownStore(file, () => today);
+    const visible = await store.list();
+
+    await store.reorderVisible([visible.find((item) => item.text === 'Today')!.id, visible[0].id]);
+
+    const nextVisible = await store.list();
+    expect(nextVisible.map((item) => item.text)).toEqual(['Today', 'Yesterday']);
+    expect(nextVisible.map((item) => item.date)).toEqual(['2026-05-11', '2026-05-10']);
+    await expect(readFile(file, 'utf8')).resolves.toContain('- [ ] [order:1] Today');
+    await expect(readFile(file, 'utf8')).resolves.toContain('- [ ] [order:2] Yesterday');
+  });
+
   test('deletes a todo by removing the markdown line', async () => {
     const store = new TodoMarkdownStore(file, () => today);
     const item = await store.add('Remove me');
