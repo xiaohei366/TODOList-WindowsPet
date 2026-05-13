@@ -14,6 +14,7 @@ export function App(): ReactElement {
   const [todoPanelVisible, setTodoPanelVisible] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
+  const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
   const [draggingWindow, setDraggingWindow] = useState(false);
   const [petHovered, setPetHovered] = useState(false);
@@ -156,6 +157,11 @@ export function App(): ReactElement {
       return;
     }
 
+    if (action.type === 'edit') {
+      setComposerOpen(false);
+      setEditingTodo({ id: item.id, text: item.text });
+      return;
+    }
     if (action.type === 'toggle-completed') {
       void window.todoPet.todos.setCompleted(item.id, !item.completed);
       return;
@@ -174,7 +180,7 @@ export function App(): ReactElement {
   }
 
   function startTodoPress(event: PointerEvent, item: TodoItem): void {
-    if (item.completed || event.button !== 0) {
+    if (editingTodo?.id === item.id || item.completed || event.button !== 0) {
       return;
     }
     todoPressStart.current = { x: event.clientX, y: event.clientY };
@@ -187,6 +193,16 @@ export function App(): ReactElement {
   function cancelTodoPress(): void {
     window.clearTimeout(longPressTimer.current);
     todoPressStart.current = null;
+  }
+
+  async function submitTodoEdit(event: FormEvent, item: TodoItem): Promise<void> {
+    event.preventDefault();
+    const text = editingTodo?.text.trim() ?? '';
+    if (!text) {
+      return;
+    }
+    await window.todoPet.todos.updateText(item.id, text);
+    setEditingTodo(null);
   }
 
   function handleTodoPointerMove(event: PointerEvent<HTMLElement>, item: TodoItem): void {
@@ -268,33 +284,57 @@ export function App(): ReactElement {
             {todos.length === 0 ? (
               <div className="empty-state">No active TODO</div>
             ) : (
-              todos.map((item) => (
-                <article
-                  className={[
-                    'todo-item',
-                    item.completed ? 'todo-item--done' : '',
-                    item.highlighted ? 'todo-item--hot' : '',
-                    draggingTodo?.id === item.id ? 'todo-item--dragging' : ''
-                  ].join(' ')}
+            todos.map((item) => (
+              <article
+                className={[
+                  'todo-item',
+                  item.completed ? 'todo-item--done' : '',
+                  item.highlighted ? 'todo-item--hot' : '',
+                  editingTodo?.id === item.id ? 'todo-item--editing' : '',
+                  draggingTodo?.id === item.id ? 'todo-item--dragging' : ''
+                ].join(' ')}
                   data-todo-id={item.id}
                   key={item.id}
                   onContextMenu={(event) => openTaskMenu(event, item)}
                   onPointerDown={(event) => startTodoPress(event, item)}
                   onPointerMove={(event) => handleTodoPointerMove(event, item)}
-                  onPointerUp={cancelTodoPress}
-                  onPointerCancel={cancelTodoPress}
-                >
-                  <button
-                    className="todo-check"
-                    title={item.completed ? 'Mark active' : 'Mark done'}
-                    onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
-                  >
-                    {item.completed ? <Check size={15} /> : <Circle size={15} />}
-                  </button>
-                  <div className="todo-copy">
-                    <span>{item.text}</span>
-                    <small>{item.overdue ? item.date : 'Today'}</small>
-                  </div>
+                onPointerUp={cancelTodoPress}
+                onPointerCancel={cancelTodoPress}
+              >
+                  {editingTodo?.id === item.id ? (
+                    <form className="todo-editor" onSubmit={(event) => void submitTodoEdit(event, item)}>
+                      <input
+                        autoFocus
+                        value={editingTodo.text}
+                        onChange={(event) => setEditingTodo({ id: item.id, text: event.target.value })}
+                      />
+                      <button className="icon-button" title="Save edit" type="submit">
+                        <Check size={16} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        title="Cancel edit"
+                        type="button"
+                        onClick={() => setEditingTodo(null)}
+                      >
+                        <X size={16} />
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <button
+                        className="todo-check"
+                        title={item.completed ? 'Mark active' : 'Mark done'}
+                        onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
+                      >
+                        {item.completed ? <Check size={15} /> : <Circle size={15} />}
+                      </button>
+                      <div className="todo-copy">
+                        <span>{item.text}</span>
+                        <small>{item.overdue ? item.date : 'Today'}</small>
+                      </div>
+                    </>
+                  )}
                 </article>
               ))
             )}

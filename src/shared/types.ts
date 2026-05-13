@@ -10,6 +10,7 @@ export type TodoItem = {
 };
 
 export type TodoMenuActionType =
+  | 'edit'
   | 'toggle-completed'
   | 'toggle-highlighted'
   | 'delete'

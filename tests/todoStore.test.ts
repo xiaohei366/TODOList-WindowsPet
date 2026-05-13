@@ -88,6 +88,24 @@ describe('TodoMarkdownStore', () => {
     await expect(readFile(file, 'utf8')).resolves.toContain('- [x] [!] ~~Important~~');
   });
 
+  test('updates todo text while preserving date markers and display order', async () => {
+    const store = new TodoMarkdownStore(file, () => today);
+    const item = await store.add('Original');
+    await store.setHighlighted(item.id, true);
+    const visible = await store.list();
+    await store.reorderVisible([visible[0].id]);
+
+    const updated = await store.updateText((await store.list())[0].id, 'Renamed task');
+
+    expect(updated).toMatchObject({
+      date: '2026-05-11',
+      text: 'Renamed task',
+      highlighted: true,
+      displayOrder: 1
+    });
+    await expect(readFile(file, 'utf8')).resolves.toContain('- [ ] [order:1] [!] Renamed task');
+  });
+
   test('reorders only active items within one day and keeps completed items last', async () => {
     const store = new TodoMarkdownStore(file, () => today);
     const first = await store.add('First');

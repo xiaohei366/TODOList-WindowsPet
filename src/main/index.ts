@@ -247,6 +247,10 @@ function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoIte
   const { item, point } = payload;
   const menu = Menu.buildFromTemplate([
     {
+      label: 'Edit',
+      click: () => sendTodoMenuAction({ type: 'edit', id: item.id })
+    },
+    {
       label: item.completed ? 'Mark Active' : 'Mark Done',
       click: () => sendTodoMenuAction({ type: 'toggle-completed', id: item.id })
     },
@@ -307,6 +311,11 @@ function registerIpc(): void {
   });
   ipcMain.handle('todos:setHighlighted', async (_event, id: string, highlighted: boolean) => {
     const item = await todoStore.setHighlighted(id, highlighted);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:updateText', async (_event, id: string, text: string) => {
+    const item = await todoStore.updateText(id, text);
     await sendTodosChanged();
     return item;
   });
