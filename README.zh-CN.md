@@ -85,6 +85,7 @@ release/TOList-Desktop-Pet-0.1.0.exe
 ### 2026-05-11 Monday
 
 - [ ] [!] Important item
+- [ ] [order:1] Display-priority item
 - [ ] Normal item
 - [x] ~~Finished item~~
 ```
@@ -95,6 +96,7 @@ release/TOList-Desktop-Pet-0.1.0.exe
 - `##` 表示月份，格式为 `YYYY-MM`。
 - `###` 表示日期，格式为 `YYYY-MM-DD Weekday`。
 - `[!]` 表示标红或高优先级。
+- `[order:n]` 表示可见 TODO 的展示优先级，可用于逾期任务和今日任务之间的跨日期排序。
 - 完成项使用 `[x]` 和删除线。
 - 删除 TODO 会直接移除对应 Markdown 行。
 

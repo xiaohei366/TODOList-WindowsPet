@@ -85,6 +85,7 @@ The app stores TODOs in this format:
 ### 2026-05-11 Monday
 
 - [ ] [!] Important item
+- [ ] [order:1] Display-priority item
 - [ ] Normal item
 - [x] ~~Finished item~~
 ```
@@ -95,6 +96,7 @@ Rules:
 - `##` headings are months in `YYYY-MM`.
 - `###` headings are days in `YYYY-MM-DD Weekday`.
 - `[!]` marks a TODO as red/high priority.
+- `[order:n]` stores display priority for active visible TODOs, including cross-date ordering between overdue and today.
 - Completed items use `[x]` and strikethrough.
 - Deleting a TODO removes its Markdown line.
 

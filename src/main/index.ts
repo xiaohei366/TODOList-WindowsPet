@@ -315,6 +315,11 @@ function registerIpc(): void {
     await sendTodosChanged();
     return items;
   });
+  ipcMain.handle('todos:reorderVisible', async (_event, ids: string[]) => {
+    const items = await todoStore.reorderVisible(ids);
+    await sendTodosChanged();
+    return items;
+  });
   ipcMain.handle('todos:openSource', async () => {
     await openTodoSource();
   });
