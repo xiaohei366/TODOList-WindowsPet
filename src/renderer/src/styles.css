@@ -177,6 +177,34 @@ button {
   outline: 2px solid rgba(40, 122, 97, 0.35);
 }
 
+.todo-item--editing {
+  grid-template-columns: 1fr;
+  padding: 6px;
+}
+
+.todo-editor {
+  display: grid;
+  grid-template-columns: 1fr 28px 28px;
+  gap: 5px;
+  min-width: 0;
+  align-items: center;
+}
+
+.todo-editor input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid rgba(61, 89, 78, 0.24);
+  border-radius: 6px;
+  outline: 0;
+  padding: 0 8px;
+  color: #17201d;
+  background: #ffffff;
+}
+
+.todo-editor input:focus {
+  border-color: #287a61;
+}
+
 .todo-check {
   display: grid;
   width: 26px;

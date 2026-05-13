@@ -185,6 +185,24 @@ export class TodoMarkdownStore {
     return this.findUpdated({ ...target, highlighted });
   }
 
+  async updateText(id: string, text: string): Promise<TodoItem> {
+    const cleaned = cleanTodoText(text);
+    if (!cleaned) {
+      throw new Error('Todo text is required.');
+    }
+
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === id);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const updated = { ...target, text: cleaned };
+    const next = items.map((item) => (item.id === id ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
   async reorder(date: string, ids: string[]): Promise<TodoItem[]> {
     const items = await this.readItems();
     const dayItems = items.filter((item) => item.date === date);

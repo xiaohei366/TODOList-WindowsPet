@@ -9,6 +9,7 @@ declare global {
         delete: (id: string) => Promise<void>;
         setCompleted: (id: string, completed: boolean) => Promise<TodoItem>;
         setHighlighted: (id: string, highlighted: boolean) => Promise<TodoItem>;
+        updateText: (id: string, text: string) => Promise<TodoItem>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
         reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
         openSource: () => Promise<void>;
