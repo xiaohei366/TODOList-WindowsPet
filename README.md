@@ -87,7 +87,7 @@ The app stores TODOs in this format:
 - [ ] [!] Important item
 - [ ] [order:1] Display-priority item
 - [ ] Normal item
-- [x] ~~Finished item~~
+- [x] [done:2026-05-11] ~~Finished item~~
 ```
 
 Rules:
@@ -97,6 +97,7 @@ Rules:
 - `###` headings are days in `YYYY-MM-DD Weekday`.
 - `[!]` marks a TODO as red/high priority.
 - `[order:n]` stores display priority for active visible TODOs, including cross-date ordering between overdue and today.
+- `[done:YYYY-MM-DD]` records the local date when a TODO was completed, so legacy TODOs finished today count toward today's completed total.
 - Completed items use `[x]` and strikethrough.
 - Deleting a TODO removes its Markdown line.
 

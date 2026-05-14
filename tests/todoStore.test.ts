@@ -74,8 +74,37 @@ describe('TodoMarkdownStore', () => {
     await store.setCompleted(first.id, true);
 
     await expect(readFile(file, 'utf8')).resolves.toContain(
-      '### 2026-05-11 Monday\n\n- [ ] Second\n- [x] ~~First~~\n'
+      '### 2026-05-11 Monday\n\n- [ ] Second\n- [x] [done:2026-05-11] ~~First~~\n'
     );
+  });
+
+  test('records completion date and keeps legacy completions visible when finished today', async () => {
+    await writeFile(
+      file,
+      [
+        '# 2026',
+        '',
+        '## 2026-05',
+        '',
+        '### 2026-05-10 Sunday',
+        '',
+        '- [ ] Legacy',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+    const store = new TodoMarkdownStore(file, () => today);
+    const legacy = (await store.list())[0];
+
+    const completed = await store.setCompleted(legacy.id, true);
+
+    expect(completed).toMatchObject({
+      date: '2026-05-10',
+      completed: true,
+      completedDate: '2026-05-11'
+    });
+    expect((await store.list()).map((item) => item.text)).toEqual(['Legacy']);
+    await expect(readFile(file, 'utf8')).resolves.toContain('- [x] [done:2026-05-11] ~~Legacy~~');
   });
 
   test('toggles highlighted marker without losing completion state', async () => {
@@ -85,7 +114,7 @@ describe('TodoMarkdownStore', () => {
 
     await store.setHighlighted(completed.id, true);
 
-    await expect(readFile(file, 'utf8')).resolves.toContain('- [x] [!] ~~Important~~');
+    await expect(readFile(file, 'utf8')).resolves.toContain('- [x] [done:2026-05-11] [!] ~~Important~~');
   });
 
   test('updates todo text while preserving date markers and display order', async () => {
@@ -117,7 +146,7 @@ describe('TodoMarkdownStore', () => {
     await store.reorder('2026-05-11', [active.find((item) => item.text === 'Third')!.id, first.id]);
 
     const content = await readFile(file, 'utf8');
-    expect(content).toContain('- [ ] Third\n- [ ] First\n- [x] ~~Second~~');
+    expect(content).toContain('- [ ] Third\n- [ ] First\n- [x] [done:2026-05-11] ~~Second~~');
     expect((await store.list()).map((item) => item.text)).toEqual(['Third', 'First', 'Second']);
   });
 

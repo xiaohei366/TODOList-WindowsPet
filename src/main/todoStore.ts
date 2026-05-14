@@ -21,7 +21,9 @@ export function selectVisibleTodos(items: TodoItem[], todayKey: string): TodoIte
   const active = withOverdue
     .filter((item) => !item.completed && (item.overdue || item.date === todayKey))
     .sort((left, right) => compareVisibleActiveTodos(left, right, todayKey));
-  const completedToday = withOverdue.filter((item) => item.completed && item.date === todayKey);
+  const completedToday = withOverdue.filter(
+    (item) => item.completed && (item.completedDate ?? item.date) === todayKey
+  );
   return [...active, ...completedToday];
 }
 
@@ -55,6 +57,7 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
       date: currentDate,
       text: parsed.text,
       completed,
+      completedDate: parsed.completedDate,
       highlighted: parsed.highlighted,
       displayOrder: parsed.displayOrder,
       overdue: !completed && currentDate < todayKey,
@@ -163,7 +166,11 @@ export class TodoMarkdownStore {
       throw new Error('Todo not found.');
     }
 
-    const target = { ...items[index], completed };
+    const target = {
+      ...items[index],
+      completed,
+      completedDate: completed ? formatDateKey(this.clock()) : undefined
+    };
     if (completed) {
       delete target.displayOrder;
     }
@@ -286,9 +293,13 @@ export class TodoMarkdownStore {
   }
 }
 
-function parseTodoBody(rawBody: string, completed: boolean): { highlighted: boolean; displayOrder?: number; text: string } {
+function parseTodoBody(
+  rawBody: string,
+  completed: boolean
+): { highlighted: boolean; completedDate?: string; displayOrder?: number; text: string } {
   let body = rawBody.trim();
   let highlighted = false;
+  let completedDate: string | undefined;
   let displayOrder: number | undefined;
 
   let parsedMarker = true;
@@ -306,6 +317,14 @@ function parseTodoBody(rawBody: string, completed: boolean): { highlighted: bool
       displayOrder = Number(order[1]);
       body = body.replace(/^\[order:\d+\]\s*/, '');
       parsedMarker = true;
+      continue;
+    }
+
+    const done = /^\[done:(\d{4}-\d{2}-\d{2})\](?:\s+|$)/.exec(body);
+    if (done) {
+      completedDate = done[1];
+      body = body.replace(/^\[done:\d{4}-\d{2}-\d{2}\]\s*/, '');
+      parsedMarker = true;
     }
   }
 
@@ -313,15 +332,16 @@ function parseTodoBody(rawBody: string, completed: boolean): { highlighted: bool
     body = body.slice(2, -2);
   }
 
-  return { highlighted, displayOrder, text: body.trim() };
+  return { highlighted, completedDate, displayOrder, text: body.trim() };
 }
 
 function formatTodoLine(item: TodoItem): string {
   const checkbox = item.completed ? 'x' : ' ';
   const order = item.displayOrder && !item.completed ? `[order:${item.displayOrder}] ` : '';
+  const done = item.completed && item.completedDate ? `[done:${item.completedDate}] ` : '';
   const marker = item.highlighted ? '[!] ' : '';
   const text = item.completed ? `~~${item.text}~~` : item.text;
-  return `- [${checkbox}] ${order}${marker}${text}`;
+  return `- [${checkbox}] ${order}${done}${marker}${text}`;
 }
 
 function compareVisibleActiveTodos(left: TodoItem, right: TodoItem, todayKey: string): number {

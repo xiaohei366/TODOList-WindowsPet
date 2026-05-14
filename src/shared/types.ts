@@ -3,6 +3,7 @@ export type TodoItem = {
   date: string;
   text: string;
   completed: boolean;
+  completedDate?: string;
   highlighted: boolean;
   overdue: boolean;
   displayOrder?: number;
