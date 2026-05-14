@@ -8,5 +8,5 @@ export function formatLocalDateKey(date: Date): string {
 }
 
 export function countCompletedToday(items: TodoItem[], todayKey: string): number {
-  return items.filter((item) => item.date === todayKey && item.completed).length;
+  return items.filter((item) => item.completed && (item.completedDate ?? item.date) === todayKey).length;
 }
