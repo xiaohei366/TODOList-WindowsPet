@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { TodoItem } from '../src/shared/types';
-import { countCompletedToday, formatLocalDateKey } from '../src/renderer/src/todoStats';
+import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from '../src/renderer/src/todoStats';
 
 function item(id: string, date: string, completed: boolean, completedDate?: string): TodoItem {
   return {
@@ -29,5 +29,11 @@ describe('todoStats helpers', () => {
     ];
 
     expect(countCompletedToday(items, '2026-05-12')).toBe(2);
+  });
+
+  test('schedules the next refresh just after local midnight', () => {
+    const delay = getNextLocalDayRefreshDelay(new Date(2026, 4, 14, 23, 59, 30, 0));
+
+    expect(delay).toBe(31_000);
   });
 });

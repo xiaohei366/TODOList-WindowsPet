@@ -10,3 +10,9 @@ export function formatLocalDateKey(date: Date): string {
 export function countCompletedToday(items: TodoItem[], todayKey: string): number {
   return items.filter((item) => item.completed && (item.completedDate ?? item.date) === todayKey).length;
 }
+
+export function getNextLocalDayRefreshDelay(now: Date): number {
+  const nextRefresh = new Date(now);
+  nextRefresh.setHours(24, 0, 1, 0);
+  return Math.max(1_000, nextRefresh.getTime() - now.getTime());
+}
