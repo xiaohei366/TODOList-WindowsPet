@@ -3,7 +3,7 @@ import { FormEvent, PointerEvent, ReactElement, useEffect, useMemo, useRef, useS
 import type { PetPackage, PetState, TodoItem, TodoMenuAction } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
-import { countCompletedToday, formatLocalDateKey } from './todoStats';
+import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
 
 const selectedPetStorageKey = 'tolist:selected-pet';
 
@@ -58,6 +58,36 @@ export function App(): ReactElement {
       offTodoAction();
     };
   }, [todos]);
+
+  useEffect(() => {
+    let disposed = false;
+    let timer: number | undefined;
+
+    const refreshAndReschedule = (): void => {
+      if (disposed) {
+        return;
+      }
+      void window.todoPet.todos.list().then((items) => {
+        if (!disposed) {
+          setTodos(items);
+        }
+      }).finally(() => {
+        if (!disposed) {
+          scheduleNextRefresh();
+        }
+      });
+    };
+
+    const scheduleNextRefresh = (): void => {
+      timer = window.setTimeout(refreshAndReschedule, getNextLocalDayRefreshDelay(new Date()));
+    };
+
+    scheduleNextRefresh();
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!draggingTodo) {
