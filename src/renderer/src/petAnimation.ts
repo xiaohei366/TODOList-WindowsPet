@@ -112,16 +112,21 @@ export function getInteractivePetState(input: InteractivePetStateInput): PetStat
   return input.baseState;
 }
 
-export function getPetSpriteStyle(state: PetState, frame: number, spritesheetUrl: string): PetSpriteStyle {
+export function getPetSpriteStyle(
+  state: PetState,
+  frame: number,
+  spritesheetUrl: string,
+  scale = 1
+): PetSpriteStyle {
   const spec = getAnimationSpec(state);
-  const scaledCellWidth = codexCellWidth * petRenderScale;
-  const scaledCellHeight = codexCellHeight * petRenderScale;
+  const scaledCellWidth = codexCellWidth * petRenderScale * scale;
+  const scaledCellHeight = codexCellHeight * petRenderScale * scale;
 
   return {
     width: scaledCellWidth,
     height: scaledCellHeight,
     backgroundImage: `url("${spritesheetUrl}")`,
-    backgroundSize: `${codexAtlasWidth * petRenderScale}px ${codexAtlasHeight * petRenderScale}px`,
+    backgroundSize: `${codexAtlasWidth * petRenderScale * scale}px ${codexAtlasHeight * petRenderScale * scale}px`,
     backgroundPosition: `-${frame * scaledCellWidth}px -${spec.row * scaledCellHeight}px`
   };
 }

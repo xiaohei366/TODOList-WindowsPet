@@ -1,11 +1,16 @@
 import { Check, Circle, Plus, X } from 'lucide-react';
-import { FormEvent, PointerEvent, ReactElement, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, PointerEvent, ReactElement, type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import type { PetPackage, PetState, TodoItem, TodoMenuAction } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
+import { clampPetUiScale, defaultPetUiScale, getPetUiScaleFromResizeDrag } from './petScale';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
 import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
 
 const selectedPetStorageKey = 'tolist:selected-pet';
+const petUiScaleStorageKey = 'tolist:pet-ui-scale';
+const petBaseBottom = 38;
+const petBaseHeight = 104;
+const todoPetGap = 8;
 
 export function App(): ReactElement {
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -17,10 +22,15 @@ export function App(): ReactElement {
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
   const [draggingWindow, setDraggingWindow] = useState(false);
+  const [resizingPetUi, setResizingPetUi] = useState(false);
+  const [petUiScale, setPetUiScale] = useState(() =>
+    clampPetUiScale(Number(localStorage.getItem(petUiScaleStorageKey) ?? defaultPetUiScale))
+  );
   const [petHovered, setPetHovered] = useState(false);
   const [transientState, setTransientState] = useState<PetState | null>(null);
   const longPressTimer = useRef<number | undefined>(undefined);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const resizeStart = useRef<{ x: number; y: number; scale: number } | null>(null);
   const todoPressStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -135,6 +145,41 @@ export function App(): ReactElement {
       window.removeEventListener('pointerup', onUp);
     };
   }, [draggingWindow]);
+
+  useEffect(() => {
+    if (!resizingPetUi) {
+      return;
+    }
+
+    const onMove = (event: globalThis.PointerEvent): void => {
+      if (!resizeStart.current) {
+        return;
+      }
+
+      const nextScale = getPetUiScaleFromResizeDrag(
+        resizeStart.current.scale,
+        event.screenX - resizeStart.current.x,
+        event.screenY - resizeStart.current.y
+      );
+      setPetUiScale(nextScale);
+    };
+
+    const onUp = (): void => {
+      setResizingPetUi(false);
+      resizeStart.current = null;
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [resizingPetUi]);
+
+  useEffect(() => {
+    localStorage.setItem(petUiScaleStorageKey, String(petUiScale));
+  }, [petUiScale]);
 
   const selectedPet = useMemo(
     () => pets.find((pet) => pet.id === selectedPetId) ?? pets[0],
@@ -279,10 +324,25 @@ export function App(): ReactElement {
     setDraggingWindow(true);
   }
 
+  function startPetUiResize(event: PointerEvent<HTMLButtonElement>): void {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeStart.current = { x: event.screenX, y: event.screenY, scale: petUiScale };
+    setResizingPetUi(true);
+  }
+
   return (
-    <main className="pet-stage">
+    <main className="pet-stage" style={{ '--pet-ui-scale': petUiScale } as CSSProperties}>
       {todoPanelVisible ? (
-        <section className="todo-panel" aria-label="TODO list">
+        <section
+          className="todo-panel"
+          aria-label="TODO list"
+          style={{ bottom: petBaseBottom + petBaseHeight * petUiScale + todoPetGap }}
+        >
           <div className="todo-panel__top">
             <div className="todo-panel__heading">
               <span className="todo-panel__title">TODO</span>
@@ -378,22 +438,33 @@ export function App(): ReactElement {
         onPointerDown={startWindowDrag}
         onPointerEnter={() => setPetHovered(true)}
         onPointerLeave={() => setPetHovered(false)}
+        style={{ width: 96 * petUiScale, height: 104 * petUiScale }}
       >
-        {selectedPet ? <PetSprite pet={selectedPet} state={petState} /> : <div className="pet-placeholder">PET</div>}
+        {selectedPet ? (
+          <PetSprite pet={selectedPet} scale={petUiScale} state={petState} />
+        ) : (
+          <div className="pet-placeholder">PET</div>
+        )}
+        <button
+          className="pet-resize-handle"
+          title="Resize pet and TODO panel"
+          type="button"
+          onPointerDown={startPetUiResize}
+        />
       </div>
 
     </main>
   );
 }
 
-function PetSprite({ pet, state }: { pet: PetPackage; state: PetState }): ReactElement {
+function PetSprite({ pet, scale, state }: { pet: PetPackage; scale: number; state: PetState }): ReactElement {
   const frame = useAnimationFrame(state);
 
   return (
     <div
       className="pet-sprite"
       title={pet.displayName}
-      style={getPetSpriteStyle(state, frame, pet.spritesheetUrl ?? '')}
+      style={getPetSpriteStyle(state, frame, pet.spritesheetUrl ?? '', scale)}
     />
   );
 }

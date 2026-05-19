@@ -16,6 +16,7 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Floating TODO panel above the pet, with up to three visible items and scroll support.
 - Motivational TODO header showing how many tasks have been completed today.
 - Automatic local-day refresh so yesterday's completed items disappear from the visible TODO panel after midnight.
+- Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 115%.
 - Visible system tray icon with Show / Hide, Open TODO Markdown, and quick Quit actions.
 - Right-click pet actions for showing or hiding the TODO panel, opening the Markdown source file, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
 - Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, and `Adjust Priority > Move Up / Move Down`.
