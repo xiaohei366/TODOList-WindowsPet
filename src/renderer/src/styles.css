@@ -267,7 +267,7 @@ button {
   filter: drop-shadow(0 10px 10px rgba(27, 37, 34, 0.2));
 }
 
-.pet-resize-handle {
+.ui-resize-handle {
   position: absolute;
   right: -4px;
   bottom: -4px;
@@ -284,9 +284,17 @@ button {
   touch-action: none;
 }
 
-.pet-resize-handle:hover,
-.pet-resize-handle:focus-visible,
-.pet-resize-handle:active {
+.todo-resize-handle {
+  right: 2px;
+  bottom: 2px;
+  z-index: 2;
+}
+
+.pet-anchor:hover .pet-resize-handle,
+.todo-panel:hover .todo-resize-handle,
+.ui-resize-handle:hover,
+.ui-resize-handle:focus-visible,
+.ui-resize-handle:active {
   opacity: 1;
 }
 

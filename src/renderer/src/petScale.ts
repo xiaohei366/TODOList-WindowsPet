@@ -1,5 +1,5 @@
 export const minPetUiScale = 0.65;
-export const maxPetUiScale = 1.15;
+export const maxPetUiScale = 2;
 export const defaultPetUiScale = 1;
 
 const resizeSensitivity = 260;

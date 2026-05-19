@@ -43,10 +43,10 @@ function getBundledAssetPath(fileName: string): string {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 430,
-    minWidth: 360,
-    minHeight: 360,
+    width: 680,
+    height: 720,
+    minWidth: 680,
+    minHeight: 720,
     frame: false,
     transparent: true,
     resizable: false,

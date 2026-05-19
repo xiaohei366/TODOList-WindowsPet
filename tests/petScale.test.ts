@@ -16,6 +16,7 @@ describe('petScale helpers', () => {
 
   test('uses diagonal drag distance to resize the pet ui', () => {
     expect(getPetUiScaleFromResizeDrag(1, 13, 13)).toBeCloseTo(1.1);
+    expect(getPetUiScaleFromResizeDrag(1, 260, 260)).toBe(maxPetUiScale);
     expect(getPetUiScaleFromResizeDrag(1, -52, -52)).toBeCloseTo(minPetUiScale);
   });
 });
