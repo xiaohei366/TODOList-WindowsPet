@@ -429,12 +429,6 @@ export function App(): ReactElement {
               ))
             )}
           </div>
-          <button
-            className="ui-resize-handle todo-resize-handle"
-            title="Resize pet and TODO panel"
-            type="button"
-            onPointerDown={startPetUiResize}
-          />
         </section>
       ) : null}
 

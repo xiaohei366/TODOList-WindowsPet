@@ -284,14 +284,6 @@ button {
   touch-action: none;
 }
 
-.todo-resize-handle {
-  right: 2px;
-  bottom: 2px;
-  z-index: 2;
-}
-
-.pet-anchor:hover .pet-resize-handle,
-.todo-panel:hover .todo-resize-handle,
 .ui-resize-handle:hover,
 .ui-resize-handle:focus-visible,
 .ui-resize-handle:active {
