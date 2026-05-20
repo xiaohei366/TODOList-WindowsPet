@@ -5,6 +5,7 @@ import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDri
 import { clampPetUiScale, defaultPetUiScale, getPetUiScaleFromResizeDrag } from './petScale';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
 import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
+import { hasExceededPetWindowDragThreshold } from './windowDrag';
 
 const selectedPetStorageKey = 'tolist:selected-pet';
 const petUiScaleStorageKey = 'tolist:pet-ui-scale';
@@ -21,7 +22,6 @@ export function App(): ReactElement {
   const [newTodoText, setNewTodoText] = useState('');
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
-  const [draggingWindow, setDraggingWindow] = useState(false);
   const [resizingPetUi, setResizingPetUi] = useState(false);
   const [petUiScale, setPetUiScale] = useState(() =>
     clampPetUiScale(Number(localStorage.getItem(petUiScaleStorageKey) ?? defaultPetUiScale))
@@ -29,7 +29,9 @@ export function App(): ReactElement {
   const [petHovered, setPetHovered] = useState(false);
   const [transientState, setTransientState] = useState<PetState | null>(null);
   const longPressTimer = useRef<number | undefined>(undefined);
-  const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const windowDrag = useRef<{ startX: number; startY: number; lastX: number; lastY: number; dragging: boolean } | null>(
+    null
+  );
   const resizeStart = useRef<{ x: number; y: number; scale: number } | null>(null);
   const todoPressStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -111,40 +113,6 @@ export function App(): ReactElement {
     window.addEventListener('pointerup', stopDragging, { once: true });
     return () => window.removeEventListener('pointerup', stopDragging);
   }, [draggingTodo, todos]);
-
-  useEffect(() => {
-    if (!draggingWindow) {
-      return;
-    }
-
-    const onMove = (event: globalThis.PointerEvent): void => {
-      if (!lastPointer.current) {
-        lastPointer.current = { x: event.screenX, y: event.screenY };
-        return;
-      }
-
-      const deltaX = event.screenX - lastPointer.current.x;
-      const deltaY = event.screenY - lastPointer.current.y;
-      lastPointer.current = { x: event.screenX, y: event.screenY };
-      if (deltaX !== 0 || deltaY !== 0) {
-        setTransientState(deltaX < 0 ? 'running-left' : 'running-right');
-        void window.todoPet.window.moveBy(deltaX, deltaY);
-      }
-    };
-
-    const onUp = (): void => {
-      setDraggingWindow(false);
-      setTransientState(null);
-      lastPointer.current = null;
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp, { once: true });
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-  }, [draggingWindow]);
 
   useEffect(() => {
     if (!resizingPetUi) {
@@ -319,9 +287,53 @@ export function App(): ReactElement {
     if (event.button !== 0) {
       return;
     }
-    event.currentTarget.setPointerCapture(event.pointerId);
-    lastPointer.current = { x: event.screenX, y: event.screenY };
-    setDraggingWindow(true);
+    event.preventDefault();
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
+    target.setPointerCapture(pointerId);
+    windowDrag.current = {
+      startX: event.screenX,
+      startY: event.screenY,
+      lastX: event.screenX,
+      lastY: event.screenY,
+      dragging: false
+    };
+
+    const onMove = (moveEvent: globalThis.PointerEvent): void => {
+      const drag = windowDrag.current;
+      if (!drag) {
+        return;
+      }
+
+      if (!drag.dragging) {
+        if (!hasExceededPetWindowDragThreshold(drag.startX, drag.startY, moveEvent.screenX, moveEvent.screenY)) {
+          return;
+        }
+        drag.dragging = true;
+      }
+
+      const deltaX = moveEvent.screenX - drag.lastX;
+      const deltaY = moveEvent.screenY - drag.lastY;
+      drag.lastX = moveEvent.screenX;
+      drag.lastY = moveEvent.screenY;
+      if (deltaX !== 0 || deltaY !== 0) {
+        setTransientState(deltaX < 0 ? 'running-left' : 'running-right');
+        void window.todoPet.window.moveBy(deltaX, deltaY);
+      }
+    };
+
+    const stopDragging = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', stopDragging);
+      if (target.hasPointerCapture(pointerId)) {
+        target.releasePointerCapture(pointerId);
+      }
+      windowDrag.current = null;
+      setTransientState(null);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', stopDragging, { once: true });
   }
 
   function startPetUiResize(event: PointerEvent<HTMLButtonElement>): void {

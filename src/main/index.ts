@@ -7,6 +7,7 @@ import {
   nativeImage,
   net,
   protocol,
+  screen,
   shell,
   Tray
 } from 'electron';
@@ -16,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TodoMarkdownStore } from './todoStore';
 import { PetRegistry } from './petRegistry';
 import { getAppPaths } from './paths';
+import { constrainWindowPosition } from './windowBounds';
 import type { PetPackage, TodoItem, TodoMenuAction } from '../shared/types';
 
 protocol.registerSchemesAsPrivileged([
@@ -353,8 +355,14 @@ function registerIpc(): void {
     if (!window) {
       return;
     }
-    const [x, y] = window.getPosition();
-    window.setPosition(Math.round(x + deltaX), Math.round(y + deltaY), false);
+    const bounds = window.getBounds();
+    const proposed = {
+      x: Math.round(bounds.x + deltaX),
+      y: Math.round(bounds.y + deltaY)
+    };
+    const display = screen.getDisplayMatching({ ...bounds, ...proposed });
+    const next = constrainWindowPosition(proposed, bounds, display.workArea);
+    window.setPosition(next.x, next.y, false);
   });
   ipcMain.handle('window:quit', () => app.quit());
 }
