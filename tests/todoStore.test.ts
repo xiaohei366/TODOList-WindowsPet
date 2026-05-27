@@ -192,4 +192,36 @@ describe('TodoMarkdownStore', () => {
     expect(content).not.toContain('Remove me');
     expect(content).toContain('Keep me');
   });
+
+  test('imports markdown by merging non-duplicate todos', async () => {
+    const store = new TodoMarkdownStore(file, () => today);
+    await store.add('Keep me');
+    const importFile = join(dir, 'import.md');
+    await writeFile(
+      importFile,
+      [
+        '# 2026',
+        '',
+        '## 2026-05',
+        '',
+        '### 2026-05-11 Monday',
+        '',
+        '- [ ] Keep me',
+        '- [ ] New imported',
+        '',
+        '### 2026-05-10 Sunday',
+        '',
+        '- [x] [done:2026-05-11] ~~Imported done~~',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+
+    const result = await store.importMarkdown(importFile);
+
+    expect(result).toEqual({ added: 2, skipped: 1 });
+    expect((await store.listAll()).map((item) => item.text).sort()).toEqual(
+      ['Imported done', 'Keep me', 'New imported'].sort()
+    );
+  });
 });

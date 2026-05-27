@@ -1,6 +1,6 @@
-import { Check, Circle, Plus, X } from 'lucide-react';
+import { Check, Circle, Pencil, Plus, Power, Trash2, X } from 'lucide-react';
 import { FormEvent, PointerEvent, ReactElement, type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
-import type { PetPackage, PetState, TodoItem, TodoMenuAction } from '../../shared/types';
+import type { PetPackage, PetState, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 import { clampPetUiScale, defaultPetUiScale, getPetUiScaleFromResizeDrag } from './petScale';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
@@ -12,15 +12,42 @@ const petUiScaleStorageKey = 'tolist:pet-ui-scale';
 const petBaseBottom = 38;
 const petBaseHeight = 104;
 const todoPetGap = 8;
+const weekdayOptions = [
+  { value: 1, label: 'M' },
+  { value: 2, label: 'T' },
+  { value: 3, label: 'W' },
+  { value: 4, label: 'T' },
+  { value: 5, label: 'F' },
+  { value: 6, label: 'S' },
+  { value: 7, label: 'S' }
+];
+
+type ScheduleFormState = {
+  kind: 'weekly' | 'one-time';
+  enabled: boolean;
+  text: string;
+  hour: string;
+  minute: string;
+  weekdays: number[];
+  year: string;
+  month: string;
+  day: string;
+};
 
 export function App(): ReactElement {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [pets, setPets] = useState<PetPackage[]>([]);
+  const [schedules, setSchedules] = useState<ScheduledTodoRule[]>([]);
   const [selectedPetId, setSelectedPetId] = useState<string>(() => localStorage.getItem(selectedPetStorageKey) ?? '');
   const [todoPanelVisible, setTodoPanelVisible] = useState(true);
+  const [schedulePanelVisible, setSchedulePanelVisible] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createEmptyScheduleForm());
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
   const [resizingPetUi, setResizingPetUi] = useState(false);
   const [petUiScale, setPetUiScale] = useState(() =>
@@ -43,8 +70,10 @@ export function App(): ReactElement {
         selectPet(loadedPets[0].id);
       }
     });
+    void window.todoPet.schedules.list().then(setSchedules);
 
     const offTodos = window.todoPet.todos.onChanged(setTodos);
+    const offSchedules = window.todoPet.schedules.onChanged(setSchedules);
     const offPets = window.todoPet.pets.onChanged((loadedPets) => {
       setPets(loadedPets);
       if (loadedPets.length > 0 && !loadedPets.some((pet) => pet.id === selectedPetId)) {
@@ -52,14 +81,23 @@ export function App(): ReactElement {
       }
     });
     const offToggleTodoPanel = window.todoPet.ui.onToggleTodoPanel(() => {
+      setSchedulePanelVisible(false);
       setTodoPanelVisible((visible) => !visible);
       setComposerOpen(false);
+    });
+    const offToggleSchedulePanel = window.todoPet.ui.onToggleSchedulePanel(() => {
+      setTodoPanelVisible(true);
+      setSchedulePanelVisible((visible) => !visible);
+      setComposerOpen(false);
+      setEditingTodo(null);
     });
     const offSelectPet = window.todoPet.ui.onSelectPet((id) => selectPet(id));
     return () => {
       offTodos();
+      offSchedules();
       offPets();
       offToggleTodoPanel();
+      offToggleSchedulePanel();
       offSelectPet();
     };
   }, [selectedPetId]);
@@ -181,6 +219,25 @@ export function App(): ReactElement {
     window.setTimeout(() => setTransientState(null), 900);
   }
 
+  async function submitSchedule(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    let input: ScheduledTodoInput;
+    try {
+      input = buildScheduleInput(scheduleForm);
+    } catch (error) {
+      setScheduleError((error as Error).message);
+      return;
+    }
+
+    setScheduleError('');
+    if (editingScheduleId) {
+      await window.todoPet.schedules.update(editingScheduleId, input);
+    } else {
+      await window.todoPet.schedules.create(input);
+    }
+    closeScheduleForm();
+  }
+
   function openPetMenu(event: React.MouseEvent): void {
     event.preventDefault();
     void window.todoPet.ui.showPetMenu({ x: Math.round(event.clientX), y: Math.round(event.clientY) });
@@ -192,6 +249,51 @@ export function App(): ReactElement {
       point: { x: Math.round(event.clientX), y: Math.round(event.clientY) },
       item
     });
+  }
+
+  function openNewScheduleForm(): void {
+    setScheduleForm(createEmptyScheduleForm());
+    setEditingScheduleId(null);
+    setScheduleError('');
+    setScheduleFormOpen(true);
+  }
+
+  function editSchedule(rule: ScheduledTodoRule): void {
+    setScheduleForm(scheduleRuleToForm(rule));
+    setEditingScheduleId(rule.id);
+    setScheduleError('');
+    setScheduleFormOpen(true);
+  }
+
+  function closeScheduleForm(): void {
+    setScheduleFormOpen(false);
+    setEditingScheduleId(null);
+    setScheduleError('');
+    setScheduleForm(createEmptyScheduleForm());
+  }
+
+  function updateScheduleForm(patch: Partial<ScheduleFormState>): void {
+    setScheduleForm((current) => ({ ...current, ...patch }));
+  }
+
+  function toggleScheduleWeekday(day: number): void {
+    setScheduleForm((current) => {
+      const weekdays = current.weekdays.includes(day)
+        ? current.weekdays.filter((weekday) => weekday !== day)
+        : [...current.weekdays, day].sort((left, right) => left - right);
+      return { ...current, weekdays };
+    });
+  }
+
+  async function toggleScheduleEnabled(rule: ScheduledTodoRule): Promise<void> {
+    await window.todoPet.schedules.setEnabled(rule.id, !rule.enabled);
+  }
+
+  async function deleteSchedule(rule: ScheduledTodoRule): Promise<void> {
+    await window.todoPet.schedules.delete(rule.id);
+    if (editingScheduleId === rule.id) {
+      closeScheduleForm();
+    }
   }
 
   function handleTodoMenuAction(action: TodoMenuAction): void {
@@ -349,7 +451,151 @@ export function App(): ReactElement {
 
   return (
     <main className="pet-stage" style={{ '--pet-ui-scale': petUiScale } as CSSProperties}>
-      {todoPanelVisible ? (
+      {schedulePanelVisible ? (
+        <section
+          className="todo-panel schedule-panel"
+          aria-label="Scheduled TODO list"
+          style={{ bottom: petBaseBottom + petBaseHeight * petUiScale + todoPetGap }}
+        >
+          <div className="todo-panel__top">
+            <div className="todo-panel__heading">
+              <span className="todo-panel__title">SCHEDULED</span>
+              <span className="schedule-count">{schedules.length} rules</span>
+            </div>
+            <div className="panel-actions">
+              <button className="icon-button" title="Add schedule" onClick={openNewScheduleForm}>
+                <Plus size={16} />
+              </button>
+              <button className="icon-button" title="Close schedules" onClick={() => setSchedulePanelVisible(false)}>
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {scheduleFormOpen ? (
+            <form className="schedule-form" onSubmit={(event) => void submitSchedule(event)}>
+              <div className="schedule-kind">
+                <button
+                  className={scheduleForm.kind === 'weekly' ? 'schedule-kind__option schedule-kind__option--active' : 'schedule-kind__option'}
+                  type="button"
+                  onClick={() => updateScheduleForm({ kind: 'weekly' })}
+                >
+                  Weekly
+                </button>
+                <button
+                  className={scheduleForm.kind === 'one-time' ? 'schedule-kind__option schedule-kind__option--active' : 'schedule-kind__option'}
+                  type="button"
+                  onClick={() => updateScheduleForm({ kind: 'one-time' })}
+                >
+                  One-time
+                </button>
+              </div>
+              <input
+                value={scheduleForm.text}
+                onChange={(event) => updateScheduleForm({ text: event.target.value })}
+                placeholder="TODO text"
+              />
+              <div className="schedule-time">
+                <input
+                  max={23}
+                  min={0}
+                  placeholder="HH"
+                  type="number"
+                  value={scheduleForm.hour}
+                  onChange={(event) => updateScheduleForm({ hour: event.target.value })}
+                />
+                <span>:</span>
+                <input
+                  max={59}
+                  min={0}
+                  placeholder="MM"
+                  type="number"
+                  value={scheduleForm.minute}
+                  onChange={(event) => updateScheduleForm({ minute: event.target.value })}
+                />
+              </div>
+              {scheduleForm.kind === 'weekly' ? (
+                <div className="weekday-row">
+                  {weekdayOptions.map((weekday) => (
+                    <button
+                      className={
+                        scheduleForm.weekdays.includes(weekday.value)
+                          ? 'weekday-toggle weekday-toggle--active'
+                          : 'weekday-toggle'
+                      }
+                      key={weekday.value}
+                      type="button"
+                      onClick={() => toggleScheduleWeekday(weekday.value)}
+                    >
+                      {weekday.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="schedule-date">
+                  <input
+                    placeholder="YYYY"
+                    type="number"
+                    value={scheduleForm.year}
+                    onChange={(event) => updateScheduleForm({ year: event.target.value })}
+                  />
+                  <input
+                    max={12}
+                    min={1}
+                    placeholder="MM"
+                    type="number"
+                    value={scheduleForm.month}
+                    onChange={(event) => updateScheduleForm({ month: event.target.value })}
+                  />
+                  <input
+                    max={31}
+                    min={1}
+                    placeholder="DD"
+                    type="number"
+                    value={scheduleForm.day}
+                    onChange={(event) => updateScheduleForm({ day: event.target.value })}
+                  />
+                </div>
+              )}
+              {scheduleError ? <div className="schedule-error">{scheduleError}</div> : null}
+              <div className="schedule-form__actions">
+                <button className="icon-button" title="Save schedule" type="submit">
+                  <Check size={16} />
+                </button>
+                <button className="icon-button" title="Cancel" type="button" onClick={closeScheduleForm}>
+                  <X size={16} />
+                </button>
+              </div>
+            </form>
+          ) : null}
+
+          <div className="schedule-list">
+            {schedules.length === 0 ? (
+              <div className="empty-state">No schedules</div>
+            ) : (
+              schedules.map((rule) => (
+                <article className={rule.enabled ? 'schedule-item' : 'schedule-item schedule-item--disabled'} key={rule.id}>
+                  <div className="schedule-item__copy">
+                    <span>{rule.text}</span>
+                    <small>{formatScheduleSummary(rule)}</small>
+                  </div>
+                  <div className="schedule-item__actions">
+                    <button className="icon-button" title={rule.enabled ? 'Disable' : 'Enable'} onClick={() => void toggleScheduleEnabled(rule)}>
+                      <Power size={15} />
+                    </button>
+                    <button className="icon-button" title="Edit" onClick={() => editSchedule(rule)}>
+                      <Pencil size={15} />
+                    </button>
+                    <button className="icon-button" title="Delete" onClick={() => void deleteSchedule(rule)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+      ) : todoPanelVisible ? (
         <section
           className="todo-panel"
           aria-label="TODO list"
@@ -467,6 +713,92 @@ export function App(): ReactElement {
 
     </main>
   );
+}
+
+function createEmptyScheduleForm(): ScheduleFormState {
+  return {
+    kind: 'weekly',
+    enabled: true,
+    text: '',
+    hour: '',
+    minute: '',
+    weekdays: [1, 2, 3, 4, 5],
+    year: '',
+    month: '',
+    day: ''
+  };
+}
+
+function scheduleRuleToForm(rule: ScheduledTodoRule): ScheduleFormState {
+  const dateParts = rule.kind === 'one-time' ? rule.date.split('-') : ['', '', ''];
+  return {
+    kind: rule.kind,
+    enabled: rule.enabled,
+    text: rule.text,
+    hour: String(rule.hour).padStart(2, '0'),
+    minute: String(rule.minute).padStart(2, '0'),
+    weekdays: rule.kind === 'weekly' ? rule.weekdays : [1, 2, 3, 4, 5],
+    year: dateParts[0],
+    month: dateParts[1],
+    day: dateParts[2]
+  };
+}
+
+function buildScheduleInput(form: ScheduleFormState): ScheduledTodoInput {
+  const text = form.text.trim();
+  if (!text) {
+    throw new Error('TODO text is required.');
+  }
+  const hour = parseRequiredNumber(form.hour, 0, 23);
+  const minute = parseRequiredNumber(form.minute, 0, 59);
+
+  if (form.kind === 'weekly') {
+    return {
+      kind: 'weekly',
+      enabled: form.enabled,
+      text,
+      hour,
+      minute,
+      weekdays: form.weekdays.length > 0 ? form.weekdays : [1, 2, 3, 4, 5]
+    };
+  }
+
+  return {
+    kind: 'one-time',
+    enabled: form.enabled,
+    text,
+    hour,
+    minute,
+    year: parseOptionalNumber(form.year),
+    month: parseOptionalNumber(form.month),
+    day: parseOptionalNumber(form.day)
+  };
+}
+
+function parseRequiredNumber(value: string, min: number, max: number): number {
+  if (!/^\d+$/.test(value.trim())) {
+    throw new Error('Schedule time is required.');
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error('Schedule time is required.');
+  }
+  return parsed;
+}
+
+function parseOptionalNumber(value: string): number | null {
+  if (!value.trim()) {
+    return null;
+  }
+  return Number(value);
+}
+
+function formatScheduleSummary(rule: ScheduledTodoRule): string {
+  const time = `${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}`;
+  if (rule.kind === 'one-time') {
+    return `${rule.date} ${time}${rule.fired ? ' done' : ''}`;
+  }
+  return `${rule.weekdays.map((day) => weekdayOptions.find((weekday) => weekday.value === day)?.label ?? day).join('')} ${time}`;
 }
 
 function PetSprite({ pet, scale, state }: { pet: PetPackage; scale: number; state: PetState }): ReactElement {

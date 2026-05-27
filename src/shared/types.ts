@@ -53,3 +53,49 @@ export type AnimationSpec = {
   frameCount: number;
   durations: number[];
 };
+
+export type ScheduleKind = 'weekly' | 'one-time';
+
+export type ScheduledTodoBase = {
+  id: string;
+  kind: ScheduleKind;
+  enabled: boolean;
+  text: string;
+  hour: number;
+  minute: number;
+  createdAt: string;
+  updatedAt: string;
+  lastGeneratedDate?: string;
+};
+
+export type WeeklyScheduledTodoRule = ScheduledTodoBase & {
+  kind: 'weekly';
+  weekdays: number[];
+};
+
+export type OneTimeScheduledTodoRule = ScheduledTodoBase & {
+  kind: 'one-time';
+  date: string;
+  fired?: boolean;
+};
+
+export type ScheduledTodoRule = WeeklyScheduledTodoRule | OneTimeScheduledTodoRule;
+
+export type ScheduledTodoInput = {
+  kind: ScheduleKind;
+  enabled?: boolean;
+  text: string;
+  hour?: number | null;
+  minute?: number | null;
+  weekdays?: number[];
+  date?: string | null;
+  year?: number | null;
+  month?: number | null;
+  day?: number | null;
+};
+
+export type ImportResult = {
+  added: number;
+  updated?: number;
+  skipped: number;
+};

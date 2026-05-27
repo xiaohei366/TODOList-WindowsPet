@@ -70,6 +70,12 @@ button {
   gap: 8px;
 }
 
+.panel-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
 .todo-panel__title {
   flex: 0 0 auto;
   color: #30423a;
@@ -205,6 +211,148 @@ button {
 
 .todo-editor input:focus {
   border-color: #287a61;
+}
+
+.schedule-panel {
+  width: 324px;
+}
+
+.schedule-count {
+  color: #6b7772;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.schedule-form {
+  display: grid;
+  gap: 7px;
+  padding: 0 8px 8px;
+}
+
+.schedule-form input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid rgba(61, 89, 78, 0.24);
+  border-radius: 6px;
+  outline: 0;
+  padding: 0 8px;
+  color: #17201d;
+  background: #ffffff;
+}
+
+.schedule-form input:focus {
+  border-color: #287a61;
+}
+
+.schedule-kind,
+.weekday-row,
+.schedule-time,
+.schedule-date,
+.schedule-form__actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.schedule-kind__option,
+.weekday-toggle {
+  height: 28px;
+  border-radius: 6px;
+  color: #30423a;
+  background: rgba(71, 107, 92, 0.1);
+  cursor: pointer;
+}
+
+.schedule-kind__option {
+  flex: 1 1 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schedule-kind__option--active,
+.weekday-toggle--active {
+  color: #ffffff;
+  background: #287a61;
+}
+
+.weekday-toggle {
+  width: 28px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.schedule-time input {
+  width: 64px;
+}
+
+.schedule-time span {
+  color: #6b7772;
+  font-weight: 800;
+}
+
+.schedule-date {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
+}
+
+.schedule-form__actions {
+  justify-content: flex-end;
+}
+
+.schedule-error {
+  color: #bf3b30;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schedule-list {
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+
+.schedule-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+  align-items: center;
+  min-height: 42px;
+  margin-top: 5px;
+  padding: 5px 5px 5px 8px;
+  border: 1px solid rgba(45, 69, 60, 0.14);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.schedule-item--disabled {
+  opacity: 0.56;
+}
+
+.schedule-item__copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.schedule-item__copy span {
+  overflow: hidden;
+  color: #17201d;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-item__copy small {
+  color: #75827d;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.schedule-item__actions {
+  display: flex;
+  gap: 1px;
 }
 
 .todo-check {

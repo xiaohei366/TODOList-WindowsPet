@@ -16,9 +16,11 @@
 - 宠物头顶显示 TODO 面板，最多可见三条，超出后在面板内滚动。
 - TODO 标题栏会显示“今日已完成 X 个任务”的激励文字。
 - 会在本地日期切换后自动刷新 TODO 面板，昨日完成项会自动从可见列表移除。
-- 鼠标移动到宠物或 TODO 框右下角会显示直角缩放柄，拖动后可在 65% 到 200% 之间同步缩放宠物和 TODO 框。
+- 支持定时 TODO 规则，可创建每周重复任务和一次性未来任务。
+- 定时规则保存到 `%APPDATA%\TOList\scheduled-todos.json`。
+- 鼠标移动到宠物右下角会显示直角缩放柄，拖动后可在 65% 到 200% 之间同步缩放宠物和 TODO 框。
 - 系统托盘会显示可见图标，支持显示/隐藏窗口、打开 TODO Markdown 和快速退出。
-- 右键宠物可显示或隐藏 TODO 面板、打开 Markdown 源文件、导入宠物 zip、刷新宠物、切换宠物样式和退出。
+- 右键宠物可显示或隐藏面板、管理定时 TODO、导入/导出 TODO Markdown 和定时 JSON、导入宠物 zip、刷新宠物、切换宠物样式和退出。
 - 右键 TODO 使用原生菜单，可编辑、标记完成、删除、标红或取消标红，并通过 `Adjust Priority > Move Up / Move Down` 调整优先级。
 - 长按 TODO 仍可在同一天内拖拽排序。
 - TODO 完成后会划线并移动到当天列表末尾。
@@ -66,7 +68,7 @@ npm run build
 构建后的便携版可执行文件位于：
 
 ```text
-release/TOList-Desktop-Pet-0.1.0.exe
+release/TOList-Desktop-Pet-0.2.0.exe
 ```
 
 ## Markdown TODO 格式
@@ -102,6 +104,17 @@ release/TOList-Desktop-Pet-0.1.0.exe
 - `[done:YYYY-MM-DD]` 表示 TODO 的本地完成日期，因此今天完成的历史遗留 TODO 也会计入今日完成数。
 - 完成项使用 `[x]` 和删除线。
 - 删除 TODO 会直接移除对应 Markdown 行。
+
+## 定时 TODO
+
+右键桌宠并选择 `Scheduled TODOs` 可管理自动创建 TODO 的规则。
+
+- 每周规则可选择星期，并在指定小时和分钟自动创建 TODO。
+- 一次性规则可选择未来日期，并在指定小时和分钟自动创建 TODO。
+- 一次性任务的年、月、日可以留空；留空时使用当前本地年、月或日。
+- 错过的任务只补发今天已经到点的内容，不补发更早日期。
+- 每条规则每天最多创建一次 TODO。
+- 迁移环境时，可通过右键菜单导出或导入 `todos.md` 和 `scheduled-todos.json`。
 
 ## 宠物包格式
 
@@ -167,14 +180,14 @@ npm install <pet-package> --prefix "$env:APPDATA\TOList\pet-packages"
 ## 项目结构
 
 ```text
-src/main/             Electron 主进程、Markdown 存储、宠物注册表
+src/main/             Electron 主进程、Markdown 存储、定时 TODO、宠物注册表
 src/preload/          暴露给 renderer 的安全 IPC 桥
 src/renderer/         React 桌宠界面
 src/shared/           共享类型
-tests/                TODO 存储、宠物注册、动画 helper 的 Vitest 测试
+tests/                TODO 存储、定时 TODO、宠物注册、动画 helper 的 Vitest 测试
 docs/                 宠物包安装文档
 ```
 
 ## 当前范围
 
-这是一个本地优先的 Windows 桌面应用。当前不包含账号同步、云存储、周期性 TODO、提醒系统或情感/人格系统。
+这是一个本地优先的 Windows 桌面应用。当前不包含账号同步、云存储、推送通知或情感/人格系统。

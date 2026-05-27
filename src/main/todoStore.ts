@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { TodoItem } from '../shared/types';
+import type { ImportResult, TodoItem } from '../shared/types';
 
 type ParsedTodo = TodoItem & {
   order: number;
@@ -210,6 +210,35 @@ export class TodoMarkdownStore {
     return this.findUpdated(updated);
   }
 
+  async importMarkdown(importPath: string): Promise<ImportResult> {
+    const importedContent = await readFile(importPath, 'utf8');
+    const todayKey = formatDateKey(this.clock());
+    const current = await this.readItems();
+    const imported = parseTodoMarkdown(importedContent, todayKey);
+    const seen = new Set(current.map(todoMergeKey));
+    let added = 0;
+    let skipped = 0;
+    const next: TodoItem[] = [...current];
+
+    for (const item of imported) {
+      const key = todoMergeKey(item);
+      if (seen.has(key)) {
+        skipped += 1;
+        continue;
+      }
+      seen.add(key);
+      next.push({
+        ...item,
+        id: '',
+        sourceLine: 0
+      });
+      added += 1;
+    }
+
+    await this.writeItems(next);
+    return { added, skipped };
+  }
+
   async reorder(date: string, ids: string[]): Promise<TodoItem[]> {
     const items = await this.readItems();
     const dayItems = items.filter((item) => item.date === date);
@@ -364,6 +393,16 @@ function compareVisibleActiveTodos(left: TodoItem, right: TodoItem, todayKey: st
 
 function cleanTodoText(text: string): string {
   return text.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function todoMergeKey(item: TodoItem): string {
+  return [
+    item.date,
+    item.text,
+    item.completed ? '1' : '0',
+    item.highlighted ? '1' : '0',
+    item.completedDate ?? ''
+  ].join('\0');
 }
 
 function weekdayName(dateKey: string): string {

@@ -16,9 +16,11 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Floating TODO panel above the pet, with up to three visible items and scroll support.
 - Motivational TODO header showing how many tasks have been completed today.
 - Automatic local-day refresh so yesterday's completed items disappear from the visible TODO panel after midnight.
-- Hover the pet or TODO panel's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
+- Scheduled TODO rules for weekly recurring tasks and one-time future tasks.
+- Scheduled rules are stored at `%APPDATA%\TOList\scheduled-todos.json`.
+- Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
 - Visible system tray icon with Show / Hide, Open TODO Markdown, and quick Quit actions.
-- Right-click pet actions for showing or hiding the TODO panel, opening the Markdown source file, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
+- Right-click pet actions for showing or hiding panels, managing scheduled TODOs, importing/exporting TODO Markdown and schedule JSON, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
 - Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, and `Adjust Priority > Move Up / Move Down`.
 - Long-press TODO sorting within the same day is still supported for direct drag ordering.
 - Completed TODOs are rendered with strikethrough and moved to the end of the day.
@@ -66,7 +68,7 @@ npm run build
 The portable executable is generated at:
 
 ```text
-release/TOList-Desktop-Pet-0.1.0.exe
+release/TOList-Desktop-Pet-0.2.0.exe
 ```
 
 ## Markdown TODO Format
@@ -102,6 +104,17 @@ Rules:
 - `[done:YYYY-MM-DD]` records the local date when a TODO was completed, so legacy TODOs finished today count toward today's completed total.
 - Completed items use `[x]` and strikethrough.
 - Deleting a TODO removes its Markdown line.
+
+## Scheduled TODOs
+
+Right-click the pet and choose `Scheduled TODOs` to manage automatic TODO creation.
+
+- Weekly rules can run on selected weekdays at a required hour and minute.
+- One-time rules can run on a specific future date at a required hour and minute.
+- One-time year, month, and day fields are optional; blank values use the current local year, month, or day.
+- Missed runs are only backfilled for today. Older missed days are not created.
+- Each rule creates at most one TODO per local day.
+- Use the pet menu to export or import both `todos.md` and `scheduled-todos.json` when moving to another Windows environment.
 
 ## Pet Package Format
 
@@ -167,14 +180,14 @@ Reuse existing Codex pets by placing them under:
 ## Project Structure
 
 ```text
-src/main/             Electron main process, Markdown storage, pet registry
+src/main/             Electron main process, Markdown storage, scheduled TODOs, pet registry
 src/preload/          Safe IPC bridge exposed to the renderer
 src/renderer/         React desktop pet UI
 src/shared/           Shared types
-tests/                Vitest coverage for TODO storage, pet registry, animation helpers
+tests/                Vitest coverage for TODO storage, scheduled TODOs, pet registry, animation helpers
 docs/                 Pet package installation documentation
 ```
 
 ## Current Scope
 
-This is a local-first Windows desktop app. It does not include account sync, cloud storage, recurring TODOs, reminders, or an emotional/personality system.
+This is a local-first Windows desktop app. It does not include account sync, cloud storage, push notifications, or an emotional/personality system.

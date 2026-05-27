@@ -12,13 +12,15 @@ import {
   Tray
 } from 'electron';
 import { watch, type FSWatcher } from 'node:fs';
+import { copyFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TodoMarkdownStore } from './todoStore';
 import { PetRegistry } from './petRegistry';
 import { getAppPaths } from './paths';
+import { getNextScheduledRunDate, runDueScheduledTodos, ScheduledTodoStore } from './scheduledTodos';
 import { constrainWindowPosition } from './windowBounds';
-import type { PetPackage, TodoItem, TodoMenuAction } from '../shared/types';
+import type { ImportResult, PetPackage, ScheduledTodoInput, TodoItem, TodoMenuAction } from '../shared/types';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -35,6 +37,8 @@ let mainWindow: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let todoWatch: FSWatcher | undefined;
 let todoStore: TodoMarkdownStore;
+let scheduledTodoStore: ScheduledTodoStore;
+let scheduledTodoTimer: NodeJS.Timeout | undefined;
 let petRegistry: PetRegistry;
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
@@ -147,9 +151,71 @@ async function sendPetsChanged(): Promise<void> {
   mainWindow.webContents.send('pets:changed', await listPetsWithUrls());
 }
 
+async function sendSchedulesChanged(): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.webContents.send('schedules:changed', await scheduledTodoStore.list());
+}
+
 async function openTodoSource(): Promise<void> {
   const filePath = await todoStore.openPath();
   await shell.openPath(filePath);
+}
+
+async function exportTodoMarkdown(): Promise<void> {
+  const source = await todoStore.openPath();
+  const result = await dialog.showSaveDialog({
+    title: 'Export TODO Markdown',
+    defaultPath: 'todos.md',
+    filters: [{ name: 'Markdown', extensions: ['md'] }]
+  });
+  if (result.canceled || !result.filePath) {
+    return;
+  }
+  await copyFile(source, result.filePath);
+}
+
+async function importTodoMarkdown(): Promise<ImportResult | undefined> {
+  const result = await dialog.showOpenDialog({
+    title: 'Import TODO Markdown',
+    filters: [{ name: 'Markdown', extensions: ['md'] }],
+    properties: ['openFile']
+  });
+  const selectedPath = result.filePaths[0];
+  if (!selectedPath) {
+    return undefined;
+  }
+  const imported = await todoStore.importMarkdown(selectedPath);
+  await sendTodosChanged();
+  return imported;
+}
+
+async function exportScheduledJson(): Promise<void> {
+  const result = await dialog.showSaveDialog({
+    title: 'Export Scheduled TODO JSON',
+    defaultPath: 'scheduled-todos.json',
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  });
+  if (result.canceled || !result.filePath) {
+    return;
+  }
+  await scheduledTodoStore.exportJson(result.filePath);
+}
+
+async function importScheduledJson(): Promise<ImportResult | undefined> {
+  const result = await dialog.showOpenDialog({
+    title: 'Import Scheduled TODO JSON',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    properties: ['openFile']
+  });
+  const selectedPath = result.filePaths[0];
+  if (!selectedPath) {
+    return undefined;
+  }
+  const imported = await scheduledTodoStore.importJson(selectedPath);
+  await afterScheduleMutation(true);
+  return imported;
 }
 
 async function importPetZip(zipPath?: string): Promise<PetPackage | undefined> {
@@ -202,11 +268,46 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
       click: () => mainWindow?.webContents.send('ui:toggleTodoPanel')
     },
     {
+      label: 'Scheduled TODOs',
+      click: () => mainWindow?.webContents.send('ui:toggleSchedulePanel')
+    },
+    { type: 'separator' },
+    {
       label: 'Open Markdown',
       click: async () => {
         await openTodoSource();
       }
     },
+    {
+      label: 'Export TODO Markdown',
+      click: async () => {
+        await exportTodoMarkdown();
+      }
+    },
+    {
+      label: 'Import TODO Markdown',
+      click: async () => {
+        await importTodoMarkdown();
+      }
+    },
+    {
+      label: 'Export Scheduled JSON',
+      click: async () => {
+        await exportScheduledJson();
+      }
+    },
+    {
+      label: 'Import Scheduled JSON',
+      click: async () => {
+        await importScheduledJson();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Switch Pet',
+      submenu: petItems
+    },
+    { type: 'separator' },
     {
       label: 'Import Pet Zip',
       click: async () => {
@@ -218,11 +319,6 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
       click: async () => {
         await sendPetsChanged();
       }
-    },
-    { type: 'separator' },
-    {
-      label: 'Switch Pet',
-      submenu: petItems
     },
     { type: 'separator' },
     {
@@ -331,8 +427,41 @@ function registerIpc(): void {
     await sendTodosChanged();
     return items;
   });
+  ipcMain.handle('todos:exportMarkdown', async () => {
+    await exportTodoMarkdown();
+  });
+  ipcMain.handle('todos:importMarkdown', async () => {
+    return importTodoMarkdown();
+  });
   ipcMain.handle('todos:openSource', async () => {
     await openTodoSource();
+  });
+
+  ipcMain.handle('schedules:list', async () => scheduledTodoStore.list());
+  ipcMain.handle('schedules:create', async (_event, input: ScheduledTodoInput) => {
+    const rule = await scheduledTodoStore.create(input);
+    await afterScheduleMutation(true);
+    return rule;
+  });
+  ipcMain.handle('schedules:update', async (_event, id: string, input: ScheduledTodoInput) => {
+    const rule = await scheduledTodoStore.update(id, input);
+    await afterScheduleMutation(true);
+    return rule;
+  });
+  ipcMain.handle('schedules:delete', async (_event, id: string) => {
+    await scheduledTodoStore.delete(id);
+    await afterScheduleMutation(false);
+  });
+  ipcMain.handle('schedules:setEnabled', async (_event, id: string, enabled: boolean) => {
+    const rule = await scheduledTodoStore.setEnabled(id, enabled);
+    await afterScheduleMutation(true);
+    return rule;
+  });
+  ipcMain.handle('schedules:exportJson', async () => {
+    await exportScheduledJson();
+  });
+  ipcMain.handle('schedules:importJson', async () => {
+    return importScheduledJson();
   });
 
   ipcMain.handle('pets:list', async () => listPetsWithUrls());
@@ -367,9 +496,52 @@ function registerIpc(): void {
   ipcMain.handle('window:quit', () => app.quit());
 }
 
+async function runScheduledTodoCheck(): Promise<void> {
+  const generated = await runDueScheduledTodos(scheduledTodoStore, todoStore);
+  if (generated > 0) {
+    await sendTodosChanged();
+  }
+  await sendSchedulesChanged();
+}
+
+async function handleScheduledTodoTimer(): Promise<void> {
+  try {
+    await runScheduledTodoCheck();
+  } finally {
+    await refreshScheduledTodoTimer();
+  }
+}
+
+async function afterScheduleMutation(runDueNow: boolean): Promise<void> {
+  if (runDueNow) {
+    await runScheduledTodoCheck();
+  } else {
+    await sendSchedulesChanged();
+  }
+  await refreshScheduledTodoTimer();
+}
+
+async function refreshScheduledTodoTimer(): Promise<void> {
+  if (scheduledTodoTimer) {
+    clearTimeout(scheduledTodoTimer);
+    scheduledTodoTimer = undefined;
+  }
+
+  const nextRun = getNextScheduledRunDate(await scheduledTodoStore.list());
+  if (!nextRun) {
+    return;
+  }
+
+  const delay = Math.max(1000, nextRun.getTime() - Date.now() + 1000);
+  scheduledTodoTimer = setTimeout(() => {
+    void handleScheduledTodoTimer();
+  }, Math.min(delay, 2_147_483_647));
+}
+
 app.whenReady().then(async () => {
   const paths = getAppPaths();
   todoStore = new TodoMarkdownStore(paths.todoFile);
+  scheduledTodoStore = new ScheduledTodoStore(paths.scheduledTodosFile);
   petRegistry = new PetRegistry({
     codexPets: paths.codexPets,
     appPets: paths.appPets,
@@ -381,10 +553,15 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   await startTodoWatch();
+  await runScheduledTodoCheck();
+  await refreshScheduledTodoTimer();
 });
 
 app.on('window-all-closed', () => {});
 
 app.on('before-quit', () => {
   todoWatch?.close();
+  if (scheduledTodoTimer) {
+    clearTimeout(scheduledTodoTimer);
+  }
 });

@@ -1,4 +1,4 @@
-import type { PetPackage, TodoItem, TodoMenuAction } from '../../shared/types';
+import type { ImportResult, PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
 
 declare global {
   interface Window {
@@ -12,8 +12,20 @@ declare global {
         updateText: (id: string, text: string) => Promise<TodoItem>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
         reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
+        exportMarkdown: () => Promise<void>;
+        importMarkdown: () => Promise<ImportResult | undefined>;
         openSource: () => Promise<void>;
         onChanged: (listener: (items: TodoItem[]) => void) => () => void;
+      };
+      schedules: {
+        list: () => Promise<ScheduledTodoRule[]>;
+        create: (input: ScheduledTodoInput) => Promise<ScheduledTodoRule>;
+        update: (id: string, input: ScheduledTodoInput) => Promise<ScheduledTodoRule>;
+        delete: (id: string) => Promise<void>;
+        setEnabled: (id: string, enabled: boolean) => Promise<ScheduledTodoRule>;
+        exportJson: () => Promise<void>;
+        importJson: () => Promise<ImportResult | undefined>;
+        onChanged: (listener: (rules: ScheduledTodoRule[]) => void) => () => void;
       };
       pets: {
         list: () => Promise<PetPackage[]>;
@@ -26,6 +38,7 @@ declare global {
         showPetMenu: (point: { x: number; y: number }) => Promise<void>;
         showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }) => Promise<void>;
         onToggleTodoPanel: (listener: () => void) => () => void;
+        onToggleSchedulePanel: (listener: () => void) => () => void;
         onSelectPet: (listener: (id: string) => void) => () => void;
         onTodoAction: (listener: (action: TodoMenuAction) => void) => () => void;
       };
