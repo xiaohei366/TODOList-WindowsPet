@@ -3,6 +3,15 @@ import { FormEvent, PointerEvent, ReactElement, type CSSProperties, useEffect, u
 import type { PetPackage, PetState, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 import { clampPetUiScale, defaultPetUiScale, getPetUiScaleFromResizeDrag } from './petScale';
+import {
+  buildScheduleInput,
+  createEmptyScheduleForm,
+  formatScheduleSummary,
+  getScheduleFormMaxDay,
+  scheduleRuleToForm,
+  type ScheduleFormState,
+  weekdayOptions
+} from './scheduleForm';
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
 import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
 import { hasExceededPetWindowDragThreshold } from './windowDrag';
@@ -12,27 +21,6 @@ const petUiScaleStorageKey = 'tolist:pet-ui-scale';
 const petBaseBottom = 38;
 const petBaseHeight = 104;
 const todoPetGap = 8;
-const weekdayOptions = [
-  { value: 1, label: 'M' },
-  { value: 2, label: 'T' },
-  { value: 3, label: 'W' },
-  { value: 4, label: 'T' },
-  { value: 5, label: 'F' },
-  { value: 6, label: 'S' },
-  { value: 7, label: 'S' }
-];
-
-type ScheduleFormState = {
-  kind: 'weekly' | 'one-time';
-  enabled: boolean;
-  text: string;
-  hour: string;
-  minute: string;
-  weekdays: number[];
-  year: string;
-  month: string;
-  day: string;
-};
 
 export function App(): ReactElement {
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -192,6 +180,7 @@ export function App(): ReactElement {
     [pets, selectedPetId]
   );
   const completedTodayCount = countCompletedToday(todos, formatLocalDateKey(new Date()));
+  const scheduleMaxDay = getScheduleFormMaxDay(scheduleForm);
   const basePetState = getTodoDrivenPetState(todos);
   const petState =
     transientState ??
@@ -459,14 +448,14 @@ export function App(): ReactElement {
         >
           <div className="todo-panel__top">
             <div className="todo-panel__heading">
-              <span className="todo-panel__title">SCHEDULED</span>
-              <span className="schedule-count">{schedules.length} rules</span>
+              <span className="todo-panel__title">定时 / SCHEDULED</span>
+              <span className="schedule-count">{schedules.length} rules / {schedules.length} 条</span>
             </div>
             <div className="panel-actions">
-              <button className="icon-button" title="Add schedule" onClick={openNewScheduleForm}>
+              <button className="icon-button" title="新增定时 / Add schedule" onClick={openNewScheduleForm}>
                 <Plus size={16} />
               </button>
-              <button className="icon-button" title="Close schedules" onClick={() => setSchedulePanelVisible(false)}>
+              <button className="icon-button" title="关闭定时 / Close schedules" onClick={() => setSchedulePanelVisible(false)}>
                 <X size={16} />
               </button>
             </div>
@@ -480,26 +469,26 @@ export function App(): ReactElement {
                   type="button"
                   onClick={() => updateScheduleForm({ kind: 'weekly' })}
                 >
-                  Weekly
+                  每周 / Weekly
                 </button>
                 <button
                   className={scheduleForm.kind === 'one-time' ? 'schedule-kind__option schedule-kind__option--active' : 'schedule-kind__option'}
                   type="button"
                   onClick={() => updateScheduleForm({ kind: 'one-time' })}
                 >
-                  One-time
+                  一次 / One-time
                 </button>
               </div>
               <input
                 value={scheduleForm.text}
                 onChange={(event) => updateScheduleForm({ text: event.target.value })}
-                placeholder="TODO text"
+                placeholder="TODO 内容 / TODO text"
               />
               <div className="schedule-time">
                 <input
                   max={23}
                   min={0}
-                  placeholder="HH"
+                  placeholder="时 HH"
                   type="number"
                   value={scheduleForm.hour}
                   onChange={(event) => updateScheduleForm({ hour: event.target.value })}
@@ -508,7 +497,7 @@ export function App(): ReactElement {
                 <input
                   max={59}
                   min={0}
-                  placeholder="MM"
+                  placeholder="分 MM"
                   type="number"
                   value={scheduleForm.minute}
                   onChange={(event) => updateScheduleForm({ minute: event.target.value })}
@@ -534,7 +523,9 @@ export function App(): ReactElement {
               ) : (
                 <div className="schedule-date">
                   <input
-                    placeholder="YYYY"
+                    max={9999}
+                    min={1}
+                    placeholder="年 YYYY"
                     type="number"
                     value={scheduleForm.year}
                     onChange={(event) => updateScheduleForm({ year: event.target.value })}
@@ -542,15 +533,15 @@ export function App(): ReactElement {
                   <input
                     max={12}
                     min={1}
-                    placeholder="MM"
+                    placeholder="月 MM"
                     type="number"
                     value={scheduleForm.month}
                     onChange={(event) => updateScheduleForm({ month: event.target.value })}
                   />
                   <input
-                    max={31}
+                    max={scheduleMaxDay}
                     min={1}
-                    placeholder="DD"
+                    placeholder="日 DD"
                     type="number"
                     value={scheduleForm.day}
                     onChange={(event) => updateScheduleForm({ day: event.target.value })}
@@ -559,10 +550,10 @@ export function App(): ReactElement {
               )}
               {scheduleError ? <div className="schedule-error">{scheduleError}</div> : null}
               <div className="schedule-form__actions">
-                <button className="icon-button" title="Save schedule" type="submit">
+                <button className="icon-button" title="保存定时 / Save schedule" type="submit">
                   <Check size={16} />
                 </button>
-                <button className="icon-button" title="Cancel" type="button" onClick={closeScheduleForm}>
+                <button className="icon-button" title="取消 / Cancel" type="button" onClick={closeScheduleForm}>
                   <X size={16} />
                 </button>
               </div>
@@ -571,7 +562,7 @@ export function App(): ReactElement {
 
           <div className="schedule-list">
             {schedules.length === 0 ? (
-              <div className="empty-state">No schedules</div>
+              <div className="empty-state">暂无定时 / No schedules</div>
             ) : (
               schedules.map((rule) => (
                 <article className={rule.enabled ? 'schedule-item' : 'schedule-item schedule-item--disabled'} key={rule.id}>
@@ -580,13 +571,13 @@ export function App(): ReactElement {
                     <small>{formatScheduleSummary(rule)}</small>
                   </div>
                   <div className="schedule-item__actions">
-                    <button className="icon-button" title={rule.enabled ? 'Disable' : 'Enable'} onClick={() => void toggleScheduleEnabled(rule)}>
+                    <button className="icon-button" title={rule.enabled ? '停用 / Disable' : '启用 / Enable'} onClick={() => void toggleScheduleEnabled(rule)}>
                       <Power size={15} />
                     </button>
-                    <button className="icon-button" title="Edit" onClick={() => editSchedule(rule)}>
+                    <button className="icon-button" title="编辑 / Edit" onClick={() => editSchedule(rule)}>
                       <Pencil size={15} />
                     </button>
-                    <button className="icon-button" title="Delete" onClick={() => void deleteSchedule(rule)}>
+                    <button className="icon-button" title="删除 / Delete" onClick={() => void deleteSchedule(rule)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -606,7 +597,7 @@ export function App(): ReactElement {
               <span className="todo-panel__title">TODO</span>
               <span className="todo-panel__streak">今日已完成 {completedTodayCount} 个任务</span>
             </div>
-            <button className="icon-button" title="Add TODO" onClick={() => setComposerOpen(true)}>
+            <button className="icon-button" title="新增 TODO / Add TODO" onClick={() => setComposerOpen(true)}>
               <Plus size={16} />
             </button>
           </div>
@@ -617,12 +608,12 @@ export function App(): ReactElement {
                 autoFocus
                 value={newTodoText}
                 onChange={(event) => setNewTodoText(event.target.value)}
-                placeholder="New TODO"
+                placeholder="新 TODO / New TODO"
               />
-              <button className="icon-button" title="Save TODO" type="submit">
+              <button className="icon-button" title="保存 TODO / Save TODO" type="submit">
                 <Check size={16} />
               </button>
-              <button className="icon-button" title="Cancel" type="button" onClick={() => setComposerOpen(false)}>
+              <button className="icon-button" title="取消 / Cancel" type="button" onClick={() => setComposerOpen(false)}>
                 <X size={16} />
               </button>
             </form>
@@ -630,7 +621,7 @@ export function App(): ReactElement {
 
           <div className="todo-list">
             {todos.length === 0 ? (
-              <div className="empty-state">No active TODO</div>
+              <div className="empty-state">暂无待办 / No active TODO</div>
             ) : (
             todos.map((item) => (
               <article
@@ -656,12 +647,12 @@ export function App(): ReactElement {
                         value={editingTodo.text}
                         onChange={(event) => setEditingTodo({ id: item.id, text: event.target.value })}
                       />
-                      <button className="icon-button" title="Save edit" type="submit">
+                      <button className="icon-button" title="保存编辑 / Save edit" type="submit">
                         <Check size={16} />
                       </button>
                       <button
                         className="icon-button"
-                        title="Cancel edit"
+                        title="取消编辑 / Cancel edit"
                         type="button"
                         onClick={() => setEditingTodo(null)}
                       >
@@ -672,7 +663,7 @@ export function App(): ReactElement {
                     <>
                       <button
                         className="todo-check"
-                        title={item.completed ? 'Mark active' : 'Mark done'}
+                        title={item.completed ? '标记未完成 / Mark active' : '标记完成 / Mark done'}
                         onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
                       >
                         {item.completed ? <Check size={15} /> : <Circle size={15} />}
@@ -705,7 +696,7 @@ export function App(): ReactElement {
         )}
         <button
           className="ui-resize-handle pet-resize-handle"
-          title="Resize pet and TODO panel"
+          title="缩放宠物和 TODO 面板 / Resize pet and TODO panel"
           type="button"
           onPointerDown={startPetUiResize}
         />
@@ -713,92 +704,6 @@ export function App(): ReactElement {
 
     </main>
   );
-}
-
-function createEmptyScheduleForm(): ScheduleFormState {
-  return {
-    kind: 'weekly',
-    enabled: true,
-    text: '',
-    hour: '',
-    minute: '',
-    weekdays: [1, 2, 3, 4, 5],
-    year: '',
-    month: '',
-    day: ''
-  };
-}
-
-function scheduleRuleToForm(rule: ScheduledTodoRule): ScheduleFormState {
-  const dateParts = rule.kind === 'one-time' ? rule.date.split('-') : ['', '', ''];
-  return {
-    kind: rule.kind,
-    enabled: rule.enabled,
-    text: rule.text,
-    hour: String(rule.hour).padStart(2, '0'),
-    minute: String(rule.minute).padStart(2, '0'),
-    weekdays: rule.kind === 'weekly' ? rule.weekdays : [1, 2, 3, 4, 5],
-    year: dateParts[0],
-    month: dateParts[1],
-    day: dateParts[2]
-  };
-}
-
-function buildScheduleInput(form: ScheduleFormState): ScheduledTodoInput {
-  const text = form.text.trim();
-  if (!text) {
-    throw new Error('TODO text is required.');
-  }
-  const hour = parseRequiredNumber(form.hour, 0, 23);
-  const minute = parseRequiredNumber(form.minute, 0, 59);
-
-  if (form.kind === 'weekly') {
-    return {
-      kind: 'weekly',
-      enabled: form.enabled,
-      text,
-      hour,
-      minute,
-      weekdays: form.weekdays.length > 0 ? form.weekdays : [1, 2, 3, 4, 5]
-    };
-  }
-
-  return {
-    kind: 'one-time',
-    enabled: form.enabled,
-    text,
-    hour,
-    minute,
-    year: parseOptionalNumber(form.year),
-    month: parseOptionalNumber(form.month),
-    day: parseOptionalNumber(form.day)
-  };
-}
-
-function parseRequiredNumber(value: string, min: number, max: number): number {
-  if (!/^\d+$/.test(value.trim())) {
-    throw new Error('Schedule time is required.');
-  }
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error('Schedule time is required.');
-  }
-  return parsed;
-}
-
-function parseOptionalNumber(value: string): number | null {
-  if (!value.trim()) {
-    return null;
-  }
-  return Number(value);
-}
-
-function formatScheduleSummary(rule: ScheduledTodoRule): string {
-  const time = `${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}`;
-  if (rule.kind === 'one-time') {
-    return `${rule.date} ${time}${rule.fired ? ' done' : ''}`;
-  }
-  return `${rule.weekdays.map((day) => weekdayOptions.find((weekday) => weekday.value === day)?.label ?? day).join('')} ${time}`;
 }
 
 function PetSprite({ pet, scale, state }: { pet: PetPackage; scale: number; state: PetState }): ReactElement {

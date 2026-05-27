@@ -18,6 +18,7 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Automatic local-day refresh so yesterday's completed items disappear from the visible TODO panel after midnight.
 - Scheduled TODO rules for weekly recurring tasks and one-time future tasks.
 - Scheduled rules are stored at `%APPDATA%\TOList\scheduled-todos.json`.
+- Bilingual Chinese / English native menus and TODO panels.
 - Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
 - Visible system tray icon with Show / Hide, Open TODO Markdown, and quick Quit actions.
 - Right-click pet actions for showing or hiding panels, managing scheduled TODOs, importing/exporting TODO Markdown and schedule JSON, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
@@ -68,7 +69,7 @@ npm run build
 The portable executable is generated at:
 
 ```text
-release/TOList-Desktop-Pet-0.2.0.exe
+release/TOList-Desktop-Pet-0.2.1.exe
 ```
 
 ## Markdown TODO Format
@@ -112,6 +113,8 @@ Right-click the pet and choose `Scheduled TODOs` to manage automatic TODO creati
 - Weekly rules can run on selected weekdays at a required hour and minute.
 - One-time rules can run on a specific future date at a required hour and minute.
 - One-time year, month, and day fields are optional; blank values use the current local year, month, or day.
+- Hours are limited to `0-23`, minutes to `0-59`, and dates must be real calendar dates such as February 28 or February 29 in leap years.
+- Weekdays are shown as numbers `1-7` in the compact picker.
 - Missed runs are only backfilled for today. Older missed days are not created.
 - Each rule creates at most one TODO per local day.
 - Use the pet menu to export or import both `todos.md` and `scheduled-todos.json` when moving to another Windows environment.

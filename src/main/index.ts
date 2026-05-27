@@ -93,18 +93,18 @@ function createTray(): void {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: 'Show / Hide',
+        label: '显示/隐藏 / Show / Hide',
         click: () => toggleMainWindow()
       },
       {
-        label: 'Open TODO Markdown',
+        label: '打开 TODO Markdown / Open TODO Markdown',
         click: async () => {
           await openTodoSource();
         }
       },
       { type: 'separator' },
       {
-        label: 'Quit TOList Desktop Pet',
+        label: '退出 / Quit TOList Desktop Pet',
         click: () => app.quit()
       }
     ])
@@ -166,7 +166,7 @@ async function openTodoSource(): Promise<void> {
 async function exportTodoMarkdown(): Promise<void> {
   const source = await todoStore.openPath();
   const result = await dialog.showSaveDialog({
-    title: 'Export TODO Markdown',
+    title: '导出 TODO Markdown / Export TODO Markdown',
     defaultPath: 'todos.md',
     filters: [{ name: 'Markdown', extensions: ['md'] }]
   });
@@ -178,7 +178,7 @@ async function exportTodoMarkdown(): Promise<void> {
 
 async function importTodoMarkdown(): Promise<ImportResult | undefined> {
   const result = await dialog.showOpenDialog({
-    title: 'Import TODO Markdown',
+    title: '导入 TODO Markdown / Import TODO Markdown',
     filters: [{ name: 'Markdown', extensions: ['md'] }],
     properties: ['openFile']
   });
@@ -193,7 +193,7 @@ async function importTodoMarkdown(): Promise<ImportResult | undefined> {
 
 async function exportScheduledJson(): Promise<void> {
   const result = await dialog.showSaveDialog({
-    title: 'Export Scheduled TODO JSON',
+    title: '导出定时 JSON / Export Scheduled TODO JSON',
     defaultPath: 'scheduled-todos.json',
     filters: [{ name: 'JSON', extensions: ['json'] }]
   });
@@ -205,7 +205,7 @@ async function exportScheduledJson(): Promise<void> {
 
 async function importScheduledJson(): Promise<ImportResult | undefined> {
   const result = await dialog.showOpenDialog({
-    title: 'Import Scheduled TODO JSON',
+    title: '导入定时 JSON / Import Scheduled TODO JSON',
     filters: [{ name: 'JSON', extensions: ['json'] }],
     properties: ['openFile']
   });
@@ -222,7 +222,7 @@ async function importPetZip(zipPath?: string): Promise<PetPackage | undefined> {
   let selectedPath = zipPath;
   if (!selectedPath) {
     const result = await dialog.showOpenDialog({
-      title: 'Import Codex Pet Zip',
+      title: '导入 Codex 宠物 Zip / Import Codex Pet Zip',
       filters: [{ name: 'Zip files', extensions: ['zip'] }],
       properties: ['openFile']
     });
@@ -261,68 +261,68 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
           checked: selectedPetId === pet.id,
           click: () => mainWindow?.webContents.send('ui:selectPet', pet.id)
         }))
-      : [{ label: 'No pets found', enabled: false }];
+      : [{ label: '未找到宠物 / No pets found', enabled: false }];
   const menu = Menu.buildFromTemplate([
     {
-      label: 'Show / Hide TODO Panel',
+      label: '显示/隐藏 TODO 面板 / Show / Hide TODO Panel',
       click: () => mainWindow?.webContents.send('ui:toggleTodoPanel')
     },
     {
-      label: 'Scheduled TODOs',
+      label: '定时 TODO / Scheduled TODOs',
       click: () => mainWindow?.webContents.send('ui:toggleSchedulePanel')
     },
     { type: 'separator' },
     {
-      label: 'Open Markdown',
+      label: '打开 Markdown / Open Markdown',
       click: async () => {
         await openTodoSource();
       }
     },
     {
-      label: 'Export TODO Markdown',
+      label: '导出 TODO Markdown / Export TODO Markdown',
       click: async () => {
         await exportTodoMarkdown();
       }
     },
     {
-      label: 'Import TODO Markdown',
+      label: '导入 TODO Markdown / Import TODO Markdown',
       click: async () => {
         await importTodoMarkdown();
       }
     },
     {
-      label: 'Export Scheduled JSON',
+      label: '导出定时 JSON / Export Scheduled JSON',
       click: async () => {
         await exportScheduledJson();
       }
     },
     {
-      label: 'Import Scheduled JSON',
+      label: '导入定时 JSON / Import Scheduled JSON',
       click: async () => {
         await importScheduledJson();
       }
     },
     { type: 'separator' },
     {
-      label: 'Switch Pet',
+      label: '切换宠物风格 / Switch Pet',
       submenu: petItems
     },
     { type: 'separator' },
     {
-      label: 'Import Pet Zip',
+      label: '导入宠物 Zip / Import Pet Zip',
       click: async () => {
         await importPetZip();
       }
     },
     {
-      label: 'Refresh Pets',
+      label: '刷新宠物 / Refresh Pets',
       click: async () => {
         await sendPetsChanged();
       }
     },
     { type: 'separator' },
     {
-      label: 'Quit',
+      label: '退出 / Quit',
       click: () => app.quit()
     }
   ]);
@@ -345,34 +345,34 @@ function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoIte
   const { item, point } = payload;
   const menu = Menu.buildFromTemplate([
     {
-      label: 'Edit',
+      label: '编辑 / Edit',
       click: () => sendTodoMenuAction({ type: 'edit', id: item.id })
     },
     {
-      label: item.completed ? 'Mark Active' : 'Mark Done',
+      label: item.completed ? '标记未完成 / Mark Active' : '标记完成 / Mark Done',
       click: () => sendTodoMenuAction({ type: 'toggle-completed', id: item.id })
     },
     {
-      label: item.highlighted ? 'Unmark Red' : 'Mark Red',
+      label: item.highlighted ? '取消标红 / Unmark Red' : '标红 / Mark Red',
       click: () => sendTodoMenuAction({ type: 'toggle-highlighted', id: item.id })
     },
     {
-      label: 'Adjust Priority',
+      label: '调整优先级 / Adjust Priority',
       enabled: !item.completed,
       submenu: [
         {
-          label: 'Move Up',
+          label: '上移 / Move Up',
           click: () => sendTodoMenuAction({ type: 'move-up', id: item.id })
         },
         {
-          label: 'Move Down',
+          label: '下移 / Move Down',
           click: () => sendTodoMenuAction({ type: 'move-down', id: item.id })
         }
       ]
     },
     { type: 'separator' },
     {
-      label: 'Delete',
+      label: '删除 / Delete',
       click: () => sendTodoMenuAction({ type: 'delete', id: item.id })
     }
   ]);

@@ -150,8 +150,8 @@ export class ScheduledTodoStore {
     if (!text) {
       throw new Error('Schedule text is required.');
     }
-    const hour = normalizeTimePart(input.hour, 0, 23);
-    const minute = normalizeTimePart(input.minute, 0, 59);
+    const hour = normalizeTimePart(input.hour, 0, 23, '小时需为 0-23 / Hour must be 0-23.');
+    const minute = normalizeTimePart(input.minute, 0, 59, '分钟需为 0-59 / Minute must be 0-59.');
 
     if (input.kind === 'weekly') {
       return withoutUndefined({
@@ -303,8 +303,8 @@ function normalizeStoredRule(rule: ScheduledTodoRule): ScheduledTodoRule {
     id: String(rule.id || randomUUID()),
     enabled: rule.enabled !== false,
     text: cleanScheduleText(rule.text),
-    hour: normalizeTimePart(rule.hour, 0, 23),
-    minute: normalizeTimePart(rule.minute, 0, 59),
+    hour: normalizeTimePart(rule.hour, 0, 23, '小时需为 0-23 / Hour must be 0-23.'),
+    minute: normalizeTimePart(rule.minute, 0, 59, '分钟需为 0-59 / Minute must be 0-59.'),
     createdAt: normalizeIso(rule.createdAt),
     updatedAt: normalizeIso(rule.updatedAt),
     lastGeneratedDate: rule.lastGeneratedDate
@@ -331,10 +331,13 @@ function normalizeStoredRule(rule: ScheduledTodoRule): ScheduledTodoRule {
   throw new Error('Invalid scheduled TODO kind.');
 }
 
-function normalizeTimePart(value: number | null | undefined, min: number, max: number): number {
+function normalizeTimePart(value: number | null | undefined, min: number, max: number, rangeMessage: string): number {
+  if (value === null || value === undefined) {
+    throw new Error('Schedule time is required.');
+  }
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error('Schedule time is required.');
+    throw new Error(rangeMessage);
   }
   return parsed;
 }

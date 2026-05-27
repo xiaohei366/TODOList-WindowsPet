@@ -127,6 +127,24 @@ describe('scheduled TODOs', () => {
     await expect(
       store.create({ kind: 'weekly', enabled: true, text: 'Task', hour: undefined, minute: 0, weekdays: [1] })
     ).rejects.toThrow('Schedule time is required.');
+    await expect(
+      store.create({ kind: 'weekly', enabled: true, text: 'Task', hour: 24, minute: 0, weekdays: [1] })
+    ).rejects.toThrow('Hour must be 0-23.');
+    await expect(
+      store.create({ kind: 'weekly', enabled: true, text: 'Task', hour: 23, minute: 60, weekdays: [1] })
+    ).rejects.toThrow('Minute must be 0-59.');
+    await expect(
+      store.create({
+        kind: 'one-time',
+        enabled: true,
+        text: 'Bad date',
+        hour: 9,
+        minute: 0,
+        year: 2026,
+        month: 2,
+        day: 29
+      })
+    ).rejects.toThrow('Schedule date is required.');
   });
 
   test('exports an empty valid JSON document when no rules exist', async () => {

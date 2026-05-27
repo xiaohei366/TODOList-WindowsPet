@@ -18,6 +18,7 @@
 - 会在本地日期切换后自动刷新 TODO 面板，昨日完成项会自动从可见列表移除。
 - 支持定时 TODO 规则，可创建每周重复任务和一次性未来任务。
 - 定时规则保存到 `%APPDATA%\TOList\scheduled-todos.json`。
+- 原生菜单和 TODO 面板使用中文 / 英文双语文案。
 - 鼠标移动到宠物右下角会显示直角缩放柄，拖动后可在 65% 到 200% 之间同步缩放宠物和 TODO 框。
 - 系统托盘会显示可见图标，支持显示/隐藏窗口、打开 TODO Markdown 和快速退出。
 - 右键宠物可显示或隐藏面板、管理定时 TODO、导入/导出 TODO Markdown 和定时 JSON、导入宠物 zip、刷新宠物、切换宠物样式和退出。
@@ -68,7 +69,7 @@ npm run build
 构建后的便携版可执行文件位于：
 
 ```text
-release/TOList-Desktop-Pet-0.2.0.exe
+release/TOList-Desktop-Pet-0.2.1.exe
 ```
 
 ## Markdown TODO 格式
@@ -107,11 +108,13 @@ release/TOList-Desktop-Pet-0.2.0.exe
 
 ## 定时 TODO
 
-右键桌宠并选择 `Scheduled TODOs` 可管理自动创建 TODO 的规则。
+右键桌宠并选择 `定时 TODO / Scheduled TODOs` 可管理自动创建 TODO 的规则。
 
 - 每周规则可选择星期，并在指定小时和分钟自动创建 TODO。
 - 一次性规则可选择未来日期，并在指定小时和分钟自动创建 TODO。
 - 一次性任务的年、月、日可以留空；留空时使用当前本地年、月或日。
+- 小时限制为 `0-23`，分钟限制为 `0-59`，日期必须是真实日历日期，例如平年 2 月 28 日、闰年 2 月 29 日。
+- 紧凑星期选择器使用数字 `1-7` 显示。
 - 错过的任务只补发今天已经到点的内容，不补发更早日期。
 - 每条规则每天最多创建一次 TODO。
 - 迁移环境时，可通过右键菜单导出或导入 `todos.md` 和 `scheduled-todos.json`。
@@ -163,13 +166,13 @@ Spritesheet 要求：
 npm install <pet-package> --prefix "$env:APPDATA\TOList\pet-packages"
 ```
 
-安装后右键桌宠，选择 `Refresh Pets`。
+安装后右键桌宠，选择 `刷新宠物 / Refresh Pets`。
 
 通过本地 zip 安装：
 
 1. 创建一个包含 `pet.json` 和 `spritesheet.webp` 的 zip。
 2. 右键桌宠。
-3. 选择 `Import Pet Zip`。
+3. 选择 `导入宠物 Zip / Import Pet Zip`。
 
 复用已有 Codex 宠物：
 
