@@ -19,6 +19,7 @@ import { TodoMarkdownStore } from './todoStore';
 import { PetRegistry } from './petRegistry';
 import { getAppPaths } from './paths';
 import { getNextScheduledRunDate, runDueScheduledTodos, ScheduledTodoStore } from './scheduledTodos';
+import { keepPetWindowOnTop, setPetWindowMousePassthrough } from './windowLayering';
 import { constrainWindowPosition } from './windowBounds';
 import type { ImportResult, PetPackage, ScheduledTodoInput, TodoItem, TodoMenuAction } from '../shared/types';
 
@@ -69,8 +70,8 @@ function createWindow(): void {
     }
   });
 
-  mainWindow.setAlwaysOnTop(true, 'floating');
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  keepPetWindowOnTop(mainWindow);
+  setPetWindowMousePassthrough(mainWindow, true);
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -80,6 +81,16 @@ function createWindow(): void {
 
   mainWindow.on('closed', () => {
     mainWindow = undefined;
+  });
+  mainWindow.on('show', () => {
+    if (mainWindow) {
+      keepPetWindowOnTop(mainWindow);
+    }
+  });
+  mainWindow.on('restore', () => {
+    if (mainWindow) {
+      keepPetWindowOnTop(mainWindow);
+    }
   });
 }
 
@@ -122,6 +133,7 @@ function toggleMainWindow(): void {
     return;
   }
   mainWindow.show();
+  keepPetWindowOnTop(mainWindow);
 }
 
 async function startTodoWatch(): Promise<void> {
@@ -493,17 +505,14 @@ function registerIpc(): void {
     const display = screen.getDisplayMatching({ ...bounds, ...proposed });
     const next = constrainWindowPosition(proposed, bounds, display.workArea);
     window.setPosition(next.x, next.y, false);
+    keepPetWindowOnTop(window);
   });
   ipcMain.handle('window:setMousePassthrough', (event, ignore: boolean) => {
     const window = BrowserWindow.fromWebContents(event.sender);
     if (!window) {
       return;
     }
-    if (ignore) {
-      window.setIgnoreMouseEvents(true, { forward: true });
-    } else {
-      window.setIgnoreMouseEvents(false);
-    }
+    setPetWindowMousePassthrough(window, ignore);
   });
   ipcMain.handle('window:quit', () => app.quit());
 }
