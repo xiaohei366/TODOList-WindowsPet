@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld('todoPet', {
   },
   window: {
     moveBy: (deltaX: number, deltaY: number): Promise<void> => ipcRenderer.invoke('window:moveBy', deltaX, deltaY),
+    setMousePassthrough: (ignore: boolean): Promise<void> => ipcRenderer.invoke('window:setMousePassthrough', ignore),
     quit: (): Promise<void> => ipcRenderer.invoke('window:quit')
   }
 });

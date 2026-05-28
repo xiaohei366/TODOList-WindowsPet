@@ -15,6 +15,7 @@ import {
 import { moveTodoRelative, moveTodoStep, type TodoPlacement } from './todoOrdering';
 import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
 import { hasExceededPetWindowDragThreshold } from './windowDrag';
+import { shouldIgnoreWindowMouseEvents } from './mousePassthrough';
 
 const selectedPetStorageKey = 'tolist:selected-pet';
 const petUiScaleStorageKey = 'tolist:pet-ui-scale';
@@ -48,7 +49,34 @@ export function App(): ReactElement {
     null
   );
   const resizeStart = useRef<{ x: number; y: number; scale: number } | null>(null);
+  const mouseInputCaptured = useRef(false);
+  const mousePassthrough = useRef<boolean | null>(null);
   const todoPressStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    setWindowMousePassthrough(true);
+    const handlePointerMove = (event: globalThis.PointerEvent): void => {
+      updateWindowMousePassthrough(event.target);
+    };
+    const handleMouseMove = (event: MouseEvent): void => {
+      updateWindowMousePassthrough(event.target);
+    };
+    const handlePointerLeave = (): void => {
+      if (!mouseInputCaptured.current) {
+        setWindowMousePassthrough(true);
+      }
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, true);
+    window.addEventListener('mousemove', handleMouseMove, true);
+    window.addEventListener('pointerleave', handlePointerLeave);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove, true);
+      window.removeEventListener('mousemove', handleMouseMove, true);
+      window.removeEventListener('pointerleave', handlePointerLeave);
+      void window.todoPet.window.setMousePassthrough(false);
+    };
+  }, []);
 
   useEffect(() => {
     void window.todoPet.todos.list().then(setTodos);
@@ -131,10 +159,12 @@ export function App(): ReactElement {
     if (!draggingTodo) {
       return;
     }
-    const stopDragging = (): void => {
+    const stopDragging = (event: globalThis.PointerEvent): void => {
       const activeIds = todos.filter((item) => !item.completed).map((item) => item.id);
       void window.todoPet.todos.reorderVisible(activeIds).then(setTodos);
       setDraggingTodo(null);
+      setWindowMouseInputCaptured(false);
+      updateWindowMousePassthroughFromPoint(event.clientX, event.clientY);
     };
     window.addEventListener('pointerup', stopDragging, { once: true });
     return () => window.removeEventListener('pointerup', stopDragging);
@@ -158,9 +188,11 @@ export function App(): ReactElement {
       setPetUiScale(nextScale);
     };
 
-    const onUp = (): void => {
+    const onUp = (event: globalThis.PointerEvent): void => {
       setResizingPetUi(false);
       resizeStart.current = null;
+      setWindowMouseInputCaptured(false);
+      updateWindowMousePassthroughFromPoint(event.clientX, event.clientY);
     };
 
     window.addEventListener('pointermove', onMove);
@@ -238,6 +270,29 @@ export function App(): ReactElement {
       point: { x: Math.round(event.clientX), y: Math.round(event.clientY) },
       item
     });
+  }
+
+  function setWindowMousePassthrough(ignore: boolean): void {
+    if (mousePassthrough.current === ignore) {
+      return;
+    }
+    mousePassthrough.current = ignore;
+    void window.todoPet.window.setMousePassthrough(ignore);
+  }
+
+  function updateWindowMousePassthrough(target: EventTarget | null): void {
+    setWindowMousePassthrough(shouldIgnoreWindowMouseEvents(target, mouseInputCaptured.current));
+  }
+
+  function updateWindowMousePassthroughFromPoint(clientX: number, clientY: number): void {
+    updateWindowMousePassthrough(document.elementFromPoint(clientX, clientY));
+  }
+
+  function setWindowMouseInputCaptured(captured: boolean): void {
+    mouseInputCaptured.current = captured;
+    if (captured) {
+      setWindowMousePassthrough(false);
+    }
   }
 
   function openNewScheduleForm(): void {
@@ -320,6 +375,7 @@ export function App(): ReactElement {
     todoPressStart.current = { x: event.clientX, y: event.clientY };
     window.clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
+      setWindowMouseInputCaptured(true);
       setDraggingTodo(item);
     }, 220);
   }
@@ -379,6 +435,7 @@ export function App(): ReactElement {
       return;
     }
     event.preventDefault();
+    setWindowMouseInputCaptured(true);
     const target = event.currentTarget;
     const pointerId = event.pointerId;
     target.setPointerCapture(pointerId);
@@ -413,7 +470,7 @@ export function App(): ReactElement {
       }
     };
 
-    const stopDragging = (): void => {
+    const stopDragging = (upEvent: globalThis.PointerEvent): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', stopDragging);
       if (target.hasPointerCapture(pointerId)) {
@@ -421,6 +478,8 @@ export function App(): ReactElement {
       }
       windowDrag.current = null;
       setTransientState(null);
+      setWindowMouseInputCaptured(false);
+      updateWindowMousePassthroughFromPoint(upEvent.clientX, upEvent.clientY);
     };
 
     window.addEventListener('pointermove', onMove);
@@ -434,6 +493,7 @@ export function App(): ReactElement {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
+    setWindowMouseInputCaptured(true);
     resizeStart.current = { x: event.screenX, y: event.screenY, scale: petUiScale };
     setResizingPetUi(true);
   }

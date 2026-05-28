@@ -70,6 +70,7 @@ function createWindow(): void {
   });
 
   mainWindow.setAlwaysOnTop(true, 'floating');
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -492,6 +493,17 @@ function registerIpc(): void {
     const display = screen.getDisplayMatching({ ...bounds, ...proposed });
     const next = constrainWindowPosition(proposed, bounds, display.workArea);
     window.setPosition(next.x, next.y, false);
+  });
+  ipcMain.handle('window:setMousePassthrough', (event, ignore: boolean) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      return;
+    }
+    if (ignore) {
+      window.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      window.setIgnoreMouseEvents(false);
+    }
   });
   ipcMain.handle('window:quit', () => app.quit());
 }

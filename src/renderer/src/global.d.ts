@@ -44,6 +44,7 @@ declare global {
       };
       window: {
         moveBy: (deltaX: number, deltaY: number) => Promise<void>;
+        setMousePassthrough: (ignore: boolean) => Promise<void>;
         quit: () => Promise<void>;
       };
     };
