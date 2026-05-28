@@ -18,11 +18,11 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Automatic local-day refresh so yesterday's completed items disappear from the visible TODO panel after midnight.
 - Scheduled TODO rules for weekly recurring tasks and one-time future tasks.
 - Scheduled rules are stored at `%APPDATA%\TOList\scheduled-todos.json`.
-- Bilingual Chinese / English native menus and TODO panels.
+- Chinese-only native menus and TODO panels for compact desktop controls.
 - Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
-- Visible system tray icon with Show / Hide, Open TODO Markdown, and quick Quit actions.
+- Visible system tray icon with `显示/隐藏`, `打开 TODO Markdown`, and `退出 TOList 桌宠` actions.
 - Right-click pet actions for showing or hiding panels, managing scheduled TODOs, importing/exporting TODO Markdown and schedule JSON, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
-- Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, and `Adjust Priority > Move Up / Move Down`.
+- Right-click TODO actions use a native Chinese menu for editing, marking done, deleting, toggling the `[!]` red marker, and moving priority with `调整优先级` plus `上移` or `下移`.
 - Long-press TODO sorting within the same day is still supported for direct drag ordering.
 - Completed TODOs are rendered with strikethrough and moved to the end of the day.
 - Pet state changes based on TODO state: `review` for active TODOs, `idle` when clear, `waving` on hover or after adding, and directional running while dragging.
@@ -108,11 +108,11 @@ Rules:
 
 ## Scheduled TODOs
 
-Right-click the pet and choose `Scheduled TODOs` to manage automatic TODO creation.
+Right-click the pet and choose `定时 TODO` to manage automatic TODO creation.
 
 - Weekly rules can run on selected weekdays at a required hour and minute.
-- One-time rules can run on a specific future date at a required hour and minute.
-- One-time year, month, and day fields are optional; blank values use the current local year, month, or day.
+- One-time rules can run on a specific future date at a required hour and minute, then remove themselves after generating the TODO.
+- New schedule forms default to the local date and time when the panel is opened.
 - Hours are limited to `0-23`, minutes to `0-59`, and dates must be real calendar dates such as February 28 or February 29 in leap years.
 - Weekdays are shown as numbers `1-7` in the compact picker.
 - Missed runs are only backfilled for today. Older missed days are not created.
@@ -166,13 +166,13 @@ Install from npm:
 npm install <pet-package> --prefix "$env:APPDATA\TOList\pet-packages"
 ```
 
-Then right-click the pet and choose `Refresh Pets`.
+Then right-click the pet and choose `刷新宠物`.
 
 Install from a local zip:
 
 1. Create a zip containing `pet.json` and `spritesheet.webp`.
 2. Right-click the pet.
-3. Choose `Import Pet Zip`.
+3. Choose `导入宠物 Zip`.
 
 Reuse existing Codex pets by placing them under:
 

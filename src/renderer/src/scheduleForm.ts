@@ -36,6 +36,17 @@ export function createEmptyScheduleForm(): ScheduleFormState {
   };
 }
 
+export function createDefaultScheduleForm(now = new Date()): ScheduleFormState {
+  return {
+    ...createEmptyScheduleForm(),
+    hour: String(now.getHours()).padStart(2, '0'),
+    minute: String(now.getMinutes()).padStart(2, '0'),
+    year: String(now.getFullYear()),
+    month: String(now.getMonth() + 1).padStart(2, '0'),
+    day: String(now.getDate()).padStart(2, '0')
+  };
+}
+
 export function scheduleRuleToForm(rule: ScheduledTodoRule): ScheduleFormState {
   const dateParts = rule.kind === 'one-time' ? rule.date.split('-') : ['', '', ''];
   return {
@@ -54,10 +65,10 @@ export function scheduleRuleToForm(rule: ScheduledTodoRule): ScheduleFormState {
 export function buildScheduleInput(form: ScheduleFormState, now = new Date()): ScheduledTodoInput {
   const text = form.text.trim();
   if (!text) {
-    throw new Error('TODO 内容必填 / TODO text is required.');
+    throw new Error('TODO 内容必填。');
   }
-  const hour = parseRequiredNumber(form.hour, 0, 23, '小时需为 0-23 / Hour must be 0-23.');
-  const minute = parseRequiredNumber(form.minute, 0, 59, '分钟需为 0-59 / Minute must be 0-59.');
+  const hour = parseRequiredNumber(form.hour, 0, 23, '小时需为 0-23。');
+  const minute = parseRequiredNumber(form.minute, 0, 59, '分钟需为 0-59。');
 
   if (form.kind === 'weekly') {
     return {
@@ -70,12 +81,12 @@ export function buildScheduleInput(form: ScheduleFormState, now = new Date()): S
     };
   }
 
-  const year = parseOptionalNumber(form.year, 1, 9999, '年份无效 / Year must be valid.');
-  const month = parseOptionalNumber(form.month, 1, 12, '月份需为 1-12 / Month must be 1-12.');
+  const year = parseOptionalNumber(form.year, 1, 9999, '年份无效。');
+  const month = parseOptionalNumber(form.month, 1, 12, '月份需为 1-12。');
   const resolvedYear = year ?? now.getFullYear();
   const resolvedMonth = month ?? now.getMonth() + 1;
   const maxDay = daysInMonth(resolvedYear, resolvedMonth);
-  const day = parseOptionalNumber(form.day, 1, maxDay, `日期需为 1-${maxDay} / Day must be 1-${maxDay}.`);
+  const day = parseOptionalNumber(form.day, 1, maxDay, `日期需为 1-${maxDay}。`);
 
   return {
     kind: 'one-time',
@@ -98,9 +109,9 @@ export function getScheduleFormMaxDay(form: ScheduleFormState, now = new Date())
 export function formatScheduleSummary(rule: ScheduledTodoRule): string {
   const time = `${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}`;
   if (rule.kind === 'one-time') {
-    return `${rule.date} ${time}${rule.fired ? ' done' : ''}`;
+    return `${rule.date} ${time}`;
   }
-  return `${rule.weekdays.map((day) => weekdayOptions.find((weekday) => weekday.value === day)?.label ?? day).join('')} ${time}`;
+  return `每周 ${rule.weekdays.map((day) => weekdayOptions.find((weekday) => weekday.value === day)?.label ?? day).join('')} ${time}`;
 }
 
 function parseRequiredNumber(value: string, min: number, max: number, message: string): number {

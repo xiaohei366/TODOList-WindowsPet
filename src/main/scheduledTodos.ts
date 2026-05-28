@@ -43,7 +43,7 @@ export class ScheduledTodoStore {
     const document = await this.readDocument();
     const existing = document.rules.find((rule) => rule.id === id);
     if (!existing) {
-      throw new Error('Schedule not found.');
+      throw new Error('定时规则不存在。');
     }
     const updated = this.normalizeInput(input, {
       id,
@@ -61,7 +61,7 @@ export class ScheduledTodoStore {
     const document = await this.readDocument();
     const next = document.rules.filter((rule) => rule.id !== id);
     if (next.length === document.rules.length) {
-      throw new Error('Schedule not found.');
+      throw new Error('定时规则不存在。');
     }
     await this.writeDocument({ ...document, rules: next });
   }
@@ -70,7 +70,7 @@ export class ScheduledTodoStore {
     const document = await this.readDocument();
     const target = document.rules.find((rule) => rule.id === id);
     if (!target) {
-      throw new Error('Schedule not found.');
+      throw new Error('定时规则不存在。');
     }
     const updated = { ...target, enabled, updatedAt: this.clock().toISOString() } as ScheduledTodoRule;
     document.rules = document.rules.map((rule) => (rule.id === id ? updated : rule));
@@ -82,7 +82,7 @@ export class ScheduledTodoStore {
     const document = await this.readDocument();
     const target = document.rules.find((rule) => rule.id === id);
     if (!target) {
-      throw new Error('Schedule not found.');
+      throw new Error('定时规则不存在。');
     }
     const updated = {
       ...target,
@@ -148,10 +148,10 @@ export class ScheduledTodoStore {
   ): ScheduledTodoRule {
     const text = cleanScheduleText(input.text);
     if (!text) {
-      throw new Error('Schedule text is required.');
+      throw new Error('TODO 内容必填。');
     }
-    const hour = normalizeTimePart(input.hour, 0, 23, '小时需为 0-23 / Hour must be 0-23.');
-    const minute = normalizeTimePart(input.minute, 0, 59, '分钟需为 0-59 / Minute must be 0-59.');
+    const hour = normalizeTimePart(input.hour, 0, 23, '小时需为 0-23。');
+    const minute = normalizeTimePart(input.minute, 0, 59, '分钟需为 0-59。');
 
     if (input.kind === 'weekly') {
       return withoutUndefined({
@@ -244,7 +244,11 @@ export async function runDueScheduledTodos(
     }
 
     await todoAdder.add(rule.text);
-    await store.markGenerated(rule.id, todayKey);
+    if (rule.kind === 'one-time') {
+      await store.delete(rule.id);
+    } else {
+      await store.markGenerated(rule.id, todayKey);
+    }
     generated += 1;
   }
 
@@ -290,27 +294,27 @@ function parseScheduleDocument(content: string): ScheduleDocument {
     return { version: scheduleDocumentVersion, rules: parsed as ScheduledTodoRule[] };
   }
   if (typeof parsed !== 'object' || parsed === null || !Array.isArray((parsed as { rules?: unknown }).rules)) {
-    throw new Error('Invalid scheduled TODO JSON.');
+    throw new Error('定时 TODO JSON 无效。');
   }
   return { version: scheduleDocumentVersion, rules: (parsed as { rules: ScheduledTodoRule[] }).rules };
 }
 
 function normalizeStoredRule(rule: ScheduledTodoRule): ScheduledTodoRule {
   if (!rule || typeof rule !== 'object') {
-    throw new Error('Invalid scheduled TODO rule.');
+    throw new Error('定时规则无效。');
   }
   const base = {
     id: String(rule.id || randomUUID()),
     enabled: rule.enabled !== false,
     text: cleanScheduleText(rule.text),
-    hour: normalizeTimePart(rule.hour, 0, 23, '小时需为 0-23 / Hour must be 0-23.'),
-    minute: normalizeTimePart(rule.minute, 0, 59, '分钟需为 0-59 / Minute must be 0-59.'),
+    hour: normalizeTimePart(rule.hour, 0, 23, '小时需为 0-23。'),
+    minute: normalizeTimePart(rule.minute, 0, 59, '分钟需为 0-59。'),
     createdAt: normalizeIso(rule.createdAt),
     updatedAt: normalizeIso(rule.updatedAt),
     lastGeneratedDate: rule.lastGeneratedDate
   };
   if (!base.text) {
-    throw new Error('Schedule text is required.');
+    throw new Error('TODO 内容必填。');
   }
 
   if (rule.kind === 'weekly') {
@@ -328,12 +332,12 @@ function normalizeStoredRule(rule: ScheduledTodoRule): ScheduledTodoRule {
       fired: Boolean(rule.fired)
     }) as ScheduledTodoRule;
   }
-  throw new Error('Invalid scheduled TODO kind.');
+  throw new Error('定时类型无效。');
 }
 
 function normalizeTimePart(value: number | null | undefined, min: number, max: number, rangeMessage: string): number {
   if (value === null || value === undefined) {
-    throw new Error('Schedule time is required.');
+    throw new Error('定时时间必填。');
   }
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
@@ -363,12 +367,12 @@ function normalizeOneTimeDate(input: ScheduledTodoInput, now: Date): string {
 
 function normalizeDateKey(date: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new Error('Schedule date is required.');
+    throw new Error('定时日期无效。');
   }
   const [year, month, day] = date.split('-').map(Number);
   const parsed = new Date(year, month - 1, day);
   if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
-    throw new Error('Schedule date is required.');
+    throw new Error('定时日期无效。');
   }
   return date;
 }

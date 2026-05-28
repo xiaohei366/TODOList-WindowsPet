@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { buildScheduleInput, createEmptyScheduleForm, getScheduleFormMaxDay, weekdayOptions } from '../src/renderer/src/scheduleForm';
+import {
+  buildScheduleInput,
+  createDefaultScheduleForm,
+  createEmptyScheduleForm,
+  formatScheduleSummary,
+  getScheduleFormMaxDay,
+  weekdayOptions
+} from '../src/renderer/src/scheduleForm';
 
 describe('schedule form helpers', () => {
   test('uses numeric weekday labels for the compact weekday picker', () => {
@@ -18,20 +25,63 @@ describe('schedule form helpers', () => {
       day: '29'
     };
 
-    expect(() => buildScheduleInput(form)).toThrow('Day must be 1-28.');
+    expect(() => buildScheduleInput(form)).toThrow('日期需为 1-28。');
   });
 
   test('rejects out-of-range schedule time', () => {
     expect(() =>
       buildScheduleInput({ ...createEmptyScheduleForm(), text: 'Bad hour', hour: '24', minute: '0' })
-    ).toThrow('Hour must be 0-23.');
+    ).toThrow('小时需为 0-23。');
     expect(() =>
       buildScheduleInput({ ...createEmptyScheduleForm(), text: 'Bad minute', hour: '23', minute: '60' })
-    ).toThrow('Minute must be 0-59.');
+    ).toThrow('分钟需为 0-59。');
   });
 
   test('computes max day from the selected year and month', () => {
     expect(getScheduleFormMaxDay({ ...createEmptyScheduleForm(), year: '2026', month: '2' })).toBe(28);
     expect(getScheduleFormMaxDay({ ...createEmptyScheduleForm(), year: '2028', month: '2' })).toBe(29);
+  });
+
+  test('defaults new schedule forms to the current local date and time', () => {
+    expect(createDefaultScheduleForm(new Date(2026, 4, 28, 16, 7))).toMatchObject({
+      hour: '16',
+      minute: '07',
+      year: '2026',
+      month: '05',
+      day: '28'
+    });
+  });
+
+  test('prefixes weekly schedule summaries with Chinese weekly text', () => {
+    expect(
+      formatScheduleSummary({
+        id: 'rule',
+        kind: 'weekly',
+        enabled: true,
+        text: 'Daily',
+        hour: 9,
+        minute: 5,
+        weekdays: [1, 2, 3],
+        createdAt: '2026-05-28T00:00:00.000Z',
+        updatedAt: '2026-05-28T00:00:00.000Z'
+      })
+    ).toBe('每周 123 09:05');
+  });
+
+  test('does not show a done suffix for one-time schedule summaries', () => {
+    expect(
+      formatScheduleSummary({
+        id: 'rule',
+        kind: 'one-time',
+        enabled: true,
+        text: 'Submit report',
+        hour: 15,
+        minute: 30,
+        date: '2026-05-28',
+        fired: true,
+        createdAt: '2026-05-28T00:00:00.000Z',
+        updatedAt: '2026-05-28T00:00:00.000Z'
+      })
+    ).toBe('2026-05-28 15:30');
   });
 });

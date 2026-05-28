@@ -281,6 +281,12 @@ button {
   font-weight: 800;
 }
 
+.weekday-row__label {
+  color: #4f635b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .schedule-time input {
   width: 64px;
 }

@@ -37,7 +37,7 @@ describe('scheduled TODOs', () => {
     expect((await store.list())[0]).toMatchObject({ lastGeneratedDate: '2026-05-11' });
   });
 
-  test('fires a one-time rule once and marks it fired', async () => {
+  test('fires a one-time rule once and removes the completed rule', async () => {
     const now = new Date(2026, 4, 13, 15, 45);
     const store = new ScheduledTodoStore(file, () => now);
     await store.create({
@@ -56,7 +56,7 @@ describe('scheduled TODOs', () => {
     await expect(runDueScheduledTodos(store, { add: async (text) => added.push(text) }, now)).resolves.toBe(0);
 
     expect(added).toEqual(['Submit report']);
-    expect((await store.list())[0]).toMatchObject({ fired: true, lastGeneratedDate: '2026-05-13' });
+    expect(await store.list()).toEqual([]);
   });
 
   test('does not backfill missed weekly runs before today', async () => {
@@ -123,16 +123,16 @@ describe('scheduled TODOs', () => {
 
     await expect(
       store.create({ kind: 'weekly', enabled: true, text: '', hour: 9, minute: 0, weekdays: [1] })
-    ).rejects.toThrow('Schedule text is required.');
+    ).rejects.toThrow('TODO 内容必填。');
     await expect(
       store.create({ kind: 'weekly', enabled: true, text: 'Task', hour: undefined, minute: 0, weekdays: [1] })
-    ).rejects.toThrow('Schedule time is required.');
+    ).rejects.toThrow('定时时间必填。');
     await expect(
       store.create({ kind: 'weekly', enabled: true, text: 'Task', hour: 24, minute: 0, weekdays: [1] })
-    ).rejects.toThrow('Hour must be 0-23.');
+    ).rejects.toThrow('小时需为 0-23。');
     await expect(
       store.create({ kind: 'weekly', enabled: true, text: 'Task', hour: 23, minute: 60, weekdays: [1] })
-    ).rejects.toThrow('Minute must be 0-59.');
+    ).rejects.toThrow('分钟需为 0-59。');
     await expect(
       store.create({
         kind: 'one-time',
@@ -144,7 +144,7 @@ describe('scheduled TODOs', () => {
         month: 2,
         day: 29
       })
-    ).rejects.toThrow('Schedule date is required.');
+    ).rejects.toThrow('定时日期无效。');
   });
 
   test('exports an empty valid JSON document when no rules exist', async () => {

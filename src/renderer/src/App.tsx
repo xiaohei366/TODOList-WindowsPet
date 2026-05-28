@@ -5,7 +5,7 @@ import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDri
 import { clampPetUiScale, defaultPetUiScale, getPetUiScaleFromResizeDrag } from './petScale';
 import {
   buildScheduleInput,
-  createEmptyScheduleForm,
+  createDefaultScheduleForm,
   formatScheduleSummary,
   getScheduleFormMaxDay,
   scheduleRuleToForm,
@@ -35,7 +35,7 @@ export function App(): ReactElement {
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState('');
-  const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createEmptyScheduleForm());
+  const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createDefaultScheduleForm());
   const [draggingTodo, setDraggingTodo] = useState<TodoItem | null>(null);
   const [resizingPetUi, setResizingPetUi] = useState(false);
   const [petUiScale, setPetUiScale] = useState(() =>
@@ -241,7 +241,7 @@ export function App(): ReactElement {
   }
 
   function openNewScheduleForm(): void {
-    setScheduleForm(createEmptyScheduleForm());
+    setScheduleForm(createDefaultScheduleForm());
     setEditingScheduleId(null);
     setScheduleError('');
     setScheduleFormOpen(true);
@@ -258,7 +258,7 @@ export function App(): ReactElement {
     setScheduleFormOpen(false);
     setEditingScheduleId(null);
     setScheduleError('');
-    setScheduleForm(createEmptyScheduleForm());
+    setScheduleForm(createDefaultScheduleForm());
   }
 
   function updateScheduleForm(patch: Partial<ScheduleFormState>): void {
@@ -443,19 +443,19 @@ export function App(): ReactElement {
       {schedulePanelVisible ? (
         <section
           className="todo-panel schedule-panel"
-          aria-label="Scheduled TODO list"
+          aria-label="定时 TODO 列表"
           style={{ bottom: petBaseBottom + petBaseHeight * petUiScale + todoPetGap }}
         >
           <div className="todo-panel__top">
             <div className="todo-panel__heading">
-              <span className="todo-panel__title">定时 / SCHEDULED</span>
-              <span className="schedule-count">{schedules.length} rules / {schedules.length} 条</span>
+              <span className="todo-panel__title">定时</span>
+              <span className="schedule-count">{schedules.length} 条</span>
             </div>
             <div className="panel-actions">
-              <button className="icon-button" title="新增定时 / Add schedule" onClick={openNewScheduleForm}>
+              <button className="icon-button" title="新增定时" onClick={openNewScheduleForm}>
                 <Plus size={16} />
               </button>
-              <button className="icon-button" title="关闭定时 / Close schedules" onClick={() => setSchedulePanelVisible(false)}>
+              <button className="icon-button" title="关闭定时" onClick={() => setSchedulePanelVisible(false)}>
                 <X size={16} />
               </button>
             </div>
@@ -469,26 +469,26 @@ export function App(): ReactElement {
                   type="button"
                   onClick={() => updateScheduleForm({ kind: 'weekly' })}
                 >
-                  每周 / Weekly
+                  每周
                 </button>
                 <button
                   className={scheduleForm.kind === 'one-time' ? 'schedule-kind__option schedule-kind__option--active' : 'schedule-kind__option'}
                   type="button"
                   onClick={() => updateScheduleForm({ kind: 'one-time' })}
                 >
-                  一次 / One-time
+                  一次
                 </button>
               </div>
               <input
                 value={scheduleForm.text}
                 onChange={(event) => updateScheduleForm({ text: event.target.value })}
-                placeholder="TODO 内容 / TODO text"
+                placeholder="TODO 内容"
               />
               <div className="schedule-time">
                 <input
                   max={23}
                   min={0}
-                  placeholder="时 HH"
+                  placeholder="时"
                   type="number"
                   value={scheduleForm.hour}
                   onChange={(event) => updateScheduleForm({ hour: event.target.value })}
@@ -497,7 +497,7 @@ export function App(): ReactElement {
                 <input
                   max={59}
                   min={0}
-                  placeholder="分 MM"
+                  placeholder="分"
                   type="number"
                   value={scheduleForm.minute}
                   onChange={(event) => updateScheduleForm({ minute: event.target.value })}
@@ -505,6 +505,7 @@ export function App(): ReactElement {
               </div>
               {scheduleForm.kind === 'weekly' ? (
                 <div className="weekday-row">
+                  <span className="weekday-row__label">每周</span>
                   {weekdayOptions.map((weekday) => (
                     <button
                       className={
@@ -525,7 +526,7 @@ export function App(): ReactElement {
                   <input
                     max={9999}
                     min={1}
-                    placeholder="年 YYYY"
+                    placeholder="年"
                     type="number"
                     value={scheduleForm.year}
                     onChange={(event) => updateScheduleForm({ year: event.target.value })}
@@ -533,7 +534,7 @@ export function App(): ReactElement {
                   <input
                     max={12}
                     min={1}
-                    placeholder="月 MM"
+                    placeholder="月"
                     type="number"
                     value={scheduleForm.month}
                     onChange={(event) => updateScheduleForm({ month: event.target.value })}
@@ -541,7 +542,7 @@ export function App(): ReactElement {
                   <input
                     max={scheduleMaxDay}
                     min={1}
-                    placeholder="日 DD"
+                    placeholder="日"
                     type="number"
                     value={scheduleForm.day}
                     onChange={(event) => updateScheduleForm({ day: event.target.value })}
@@ -550,10 +551,10 @@ export function App(): ReactElement {
               )}
               {scheduleError ? <div className="schedule-error">{scheduleError}</div> : null}
               <div className="schedule-form__actions">
-                <button className="icon-button" title="保存定时 / Save schedule" type="submit">
+                <button className="icon-button" title="保存定时" type="submit">
                   <Check size={16} />
                 </button>
-                <button className="icon-button" title="取消 / Cancel" type="button" onClick={closeScheduleForm}>
+                <button className="icon-button" title="取消" type="button" onClick={closeScheduleForm}>
                   <X size={16} />
                 </button>
               </div>
@@ -562,7 +563,7 @@ export function App(): ReactElement {
 
           <div className="schedule-list">
             {schedules.length === 0 ? (
-              <div className="empty-state">暂无定时 / No schedules</div>
+              <div className="empty-state">暂无定时</div>
             ) : (
               schedules.map((rule) => (
                 <article className={rule.enabled ? 'schedule-item' : 'schedule-item schedule-item--disabled'} key={rule.id}>
@@ -571,13 +572,13 @@ export function App(): ReactElement {
                     <small>{formatScheduleSummary(rule)}</small>
                   </div>
                   <div className="schedule-item__actions">
-                    <button className="icon-button" title={rule.enabled ? '停用 / Disable' : '启用 / Enable'} onClick={() => void toggleScheduleEnabled(rule)}>
+                    <button className="icon-button" title={rule.enabled ? '停用' : '启用'} onClick={() => void toggleScheduleEnabled(rule)}>
                       <Power size={15} />
                     </button>
-                    <button className="icon-button" title="编辑 / Edit" onClick={() => editSchedule(rule)}>
+                    <button className="icon-button" title="编辑" onClick={() => editSchedule(rule)}>
                       <Pencil size={15} />
                     </button>
-                    <button className="icon-button" title="删除 / Delete" onClick={() => void deleteSchedule(rule)}>
+                    <button className="icon-button" title="删除" onClick={() => void deleteSchedule(rule)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -597,7 +598,7 @@ export function App(): ReactElement {
               <span className="todo-panel__title">TODO</span>
               <span className="todo-panel__streak">今日已完成 {completedTodayCount} 个任务</span>
             </div>
-            <button className="icon-button" title="新增 TODO / Add TODO" onClick={() => setComposerOpen(true)}>
+            <button className="icon-button" title="新增 TODO" onClick={() => setComposerOpen(true)}>
               <Plus size={16} />
             </button>
           </div>
@@ -608,12 +609,12 @@ export function App(): ReactElement {
                 autoFocus
                 value={newTodoText}
                 onChange={(event) => setNewTodoText(event.target.value)}
-                placeholder="新 TODO / New TODO"
+                placeholder="新 TODO"
               />
-              <button className="icon-button" title="保存 TODO / Save TODO" type="submit">
+              <button className="icon-button" title="保存 TODO" type="submit">
                 <Check size={16} />
               </button>
-              <button className="icon-button" title="取消 / Cancel" type="button" onClick={() => setComposerOpen(false)}>
+              <button className="icon-button" title="取消" type="button" onClick={() => setComposerOpen(false)}>
                 <X size={16} />
               </button>
             </form>
@@ -621,7 +622,7 @@ export function App(): ReactElement {
 
           <div className="todo-list">
             {todos.length === 0 ? (
-              <div className="empty-state">暂无待办 / No active TODO</div>
+              <div className="empty-state">暂无待办</div>
             ) : (
             todos.map((item) => (
               <article
@@ -647,12 +648,12 @@ export function App(): ReactElement {
                         value={editingTodo.text}
                         onChange={(event) => setEditingTodo({ id: item.id, text: event.target.value })}
                       />
-                      <button className="icon-button" title="保存编辑 / Save edit" type="submit">
+                      <button className="icon-button" title="保存编辑" type="submit">
                         <Check size={16} />
                       </button>
                       <button
                         className="icon-button"
-                        title="取消编辑 / Cancel edit"
+                        title="取消编辑"
                         type="button"
                         onClick={() => setEditingTodo(null)}
                       >
@@ -663,7 +664,7 @@ export function App(): ReactElement {
                     <>
                       <button
                         className="todo-check"
-                        title={item.completed ? '标记未完成 / Mark active' : '标记完成 / Mark done'}
+                        title={item.completed ? '标记未完成' : '标记完成'}
                         onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
                       >
                         {item.completed ? <Check size={15} /> : <Circle size={15} />}
@@ -696,7 +697,7 @@ export function App(): ReactElement {
         )}
         <button
           className="ui-resize-handle pet-resize-handle"
-          title="缩放宠物和 TODO 面板 / Resize pet and TODO panel"
+          title="缩放宠物和 TODO 面板"
           type="button"
           onPointerDown={startPetUiResize}
         />
