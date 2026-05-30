@@ -34,6 +34,15 @@
 - 推荐 Node.js 24+。
 - 推荐 npm 11+。
 
+## 技术栈
+
+- 桌面运行时：Electron 39，使用透明无边框 Windows `BrowserWindow`、原生托盘菜单、IPC，以及 Windows 置顶和鼠标穿透能力。
+- 前端界面：React 19、TypeScript、CSS 和 `lucide-react` 图标。
+- 构建工具：Electron Vite、Vite、TypeScript 编译器，以及 electron-builder 的 Windows 便携版打包。
+- 数据持久化：TODO 使用本地 Markdown，定时 TODO 规则和应用设置使用 JSON。
+- 宠物兼容：读取 Codex 风格的 `pet.json` 和 `spritesheet.webp` 图集，通过 JSZip 导入 zip，并用自定义 `todolist-pet://` 协议加载资源。
+- 测试：Vitest 覆盖 Markdown 存储、定时调度、宠物注册、排序、本地化、窗口行为和动画 helper。
+
 ## 开发命令
 
 安装依赖：

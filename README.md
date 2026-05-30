@@ -34,6 +34,15 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Node.js 24+ recommended.
 - npm 11+ recommended.
 
+## Tech Stack
+
+- Desktop runtime: Electron 39 with transparent frameless Windows `BrowserWindow`, native tray menus, IPC, and Windows topmost/mouse-passthrough integration.
+- UI: React 19, TypeScript, CSS, and `lucide-react` icons.
+- Build tooling: Electron Vite, Vite, TypeScript compiler, and electron-builder portable Windows packaging.
+- Persistence: local Markdown for TODO data, JSON for scheduled TODO rules and app settings.
+- Pet compatibility: Codex-style `pet.json` plus `spritesheet.webp` atlas loading, zip import via JSZip, and custom `todolist-pet://` asset protocol.
+- Testing: Vitest unit tests for Markdown storage, scheduling, pet registry, ordering, localization, window behavior, and animation helpers.
+
 ## Development
 
 Install dependencies:
