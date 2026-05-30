@@ -20,7 +20,7 @@
 - 定时规则保存到 `%APPDATA%\TOList\scheduled-todos.json`。
 - 原生菜单和 TODO 面板支持中文 / English 切换。
 - 鼠标移动到宠物右下角会显示直角缩放柄，拖动后可在 65% 到 200% 之间同步缩放宠物和 TODO 框。
-- 系统托盘会显示可见图标，支持显示/隐藏窗口、打开 TODO Markdown 和快速退出。
+- 系统托盘会显示可见图标，支持显示/隐藏窗口、打开存储数据的原始文件和快速退出。
 - 右键宠物可显示或隐藏面板、切换语言、管理定时 TODO、导入/导出 TODO 项和定时任务、导入宠物 zip、刷新宠物、切换宠物样式和退出。
 - 右键 TODO 使用原生菜单，可编辑、标记完成、删除、标红或取消标红，并通过 `调整优先级` 下的 `上移` 或 `下移` 调整优先级。
 - 长按 TODO 仍可在同一天内拖拽排序。
@@ -78,7 +78,7 @@ npm run build
 构建后的便携版可执行文件位于：
 
 ```text
-release/TOList-Desktop-Pet-0.2.1.exe
+release/TOList-Desktop-Pet-0.2.2.exe
 ```
 
 ## Markdown TODO 格式

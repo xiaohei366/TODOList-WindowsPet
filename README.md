@@ -20,7 +20,7 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Scheduled rules are stored at `%APPDATA%\TOList\scheduled-todos.json`.
 - Switchable Chinese / English native menus and TODO panels from the pet right-click menu.
 - Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
-- Visible system tray icon with show/hide, open TODO Markdown, and quick quit actions in the selected language.
+- Visible system tray icon with show/hide, open raw data file, and quick quit actions in the selected language.
 - Right-click pet actions for showing or hiding panels, switching language, managing scheduled TODOs, importing/exporting TODO items and scheduled tasks, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
 - Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, and moving priority up or down.
 - Long-press TODO sorting within the same day is still supported for direct drag ordering.
@@ -78,7 +78,7 @@ npm run build
 The portable executable is generated at:
 
 ```text
-release/TOList-Desktop-Pet-0.2.1.exe
+release/TOList-Desktop-Pet-0.2.2.exe
 ```
 
 ## Markdown TODO Format
