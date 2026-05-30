@@ -18,11 +18,11 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Automatic local-day refresh so yesterday's completed items disappear from the visible TODO panel after midnight.
 - Scheduled TODO rules for weekly recurring tasks and one-time future tasks.
 - Scheduled rules are stored at `%APPDATA%\TOList\scheduled-todos.json`.
-- Chinese-only native menus and TODO panels for compact desktop controls.
+- Switchable Chinese / English native menus and TODO panels from the pet right-click menu.
 - Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
-- Visible system tray icon with `显示/隐藏`, `打开 TODO Markdown`, and `退出 TOList 桌宠` actions.
-- Right-click pet actions for showing or hiding panels, managing scheduled TODOs, importing/exporting TODO Markdown and schedule JSON, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
-- Right-click TODO actions use a native Chinese menu for editing, marking done, deleting, toggling the `[!]` red marker, and moving priority with `调整优先级` plus `上移` or `下移`.
+- Visible system tray icon with show/hide, open TODO Markdown, and quick quit actions in the selected language.
+- Right-click pet actions for showing or hiding panels, switching language, managing scheduled TODOs, importing/exporting TODO Markdown and schedule JSON, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
+- Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, and moving priority up or down.
 - Long-press TODO sorting within the same day is still supported for direct drag ordering.
 - Completed TODOs are rendered with strikethrough and moved to the end of the day.
 - Pet state changes based on TODO state: `review` for active TODOs, `idle` when clear, `waving` on hover or after adding, and directional running while dragging.

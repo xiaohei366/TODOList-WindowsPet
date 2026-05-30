@@ -18,10 +18,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TodoMarkdownStore } from './todoStore';
 import { PetRegistry } from './petRegistry';
 import { getAppPaths } from './paths';
+import { AppSettingsStore } from './appSettings';
 import { getNextScheduledRunDate, runDueScheduledTodos, ScheduledTodoStore } from './scheduledTodos';
 import { keepPetWindowOnTop, setPetWindowMousePassthrough } from './windowLayering';
 import { constrainWindowPosition } from './windowBounds';
 import type { ImportResult, PetPackage, ScheduledTodoInput, TodoItem, TodoMenuAction } from '../shared/types';
+import { type AppLanguage, type I18nKey, defaultLanguage, languageOptions, normalizeLanguage, t } from '../shared/i18n';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -39,8 +41,10 @@ let tray: Tray | undefined;
 let todoWatch: FSWatcher | undefined;
 let todoStore: TodoMarkdownStore;
 let scheduledTodoStore: ScheduledTodoStore;
+let settingsStore: AppSettingsStore;
 let scheduledTodoTimer: NodeJS.Timeout | undefined;
 let petRegistry: PetRegistry;
+let currentLanguage: AppLanguage = defaultLanguage;
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
@@ -102,25 +106,46 @@ function createTray(): void {
   tray = new Tray(createTrayIcon());
   tray.setToolTip('TOList Desktop Pet');
   tray.on('double-click', () => toggleMainWindow());
+  updateTrayMenu();
+}
+
+function tr(key: I18nKey, values?: Record<string, string | number>): string {
+  return t(currentLanguage, key, values);
+}
+
+function updateTrayMenu(): void {
+  if (!tray) {
+    return;
+  }
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: '显示/隐藏',
+        label: tr('menu.showHide'),
         click: () => toggleMainWindow()
       },
       {
-        label: '打开 TODO Markdown',
+        label: tr('menu.openTodoMarkdown'),
         click: async () => {
           await openTodoSource();
         }
       },
       { type: 'separator' },
       {
-        label: '退出 TOList 桌宠',
+        label: tr('menu.quitApp'),
         click: () => app.quit()
       }
     ])
   );
+}
+
+async function setAppLanguage(language: AppLanguage): Promise<AppLanguage> {
+  currentLanguage = normalizeLanguage(language);
+  await settingsStore.setLanguage(currentLanguage);
+  updateTrayMenu();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('settings:languageChanged', currentLanguage);
+  }
+  return currentLanguage;
 }
 
 function toggleMainWindow(): void {
@@ -179,7 +204,7 @@ async function openTodoSource(): Promise<void> {
 async function exportTodoMarkdown(): Promise<void> {
   const source = await todoStore.openPath();
   const result = await dialog.showSaveDialog({
-    title: '导出 TODO Markdown',
+    title: tr('dialog.exportTodoMarkdown'),
     defaultPath: 'todos.md',
     filters: [{ name: 'Markdown', extensions: ['md'] }]
   });
@@ -191,7 +216,7 @@ async function exportTodoMarkdown(): Promise<void> {
 
 async function importTodoMarkdown(): Promise<ImportResult | undefined> {
   const result = await dialog.showOpenDialog({
-    title: '导入 TODO Markdown',
+    title: tr('dialog.importTodoMarkdown'),
     filters: [{ name: 'Markdown', extensions: ['md'] }],
     properties: ['openFile']
   });
@@ -206,7 +231,7 @@ async function importTodoMarkdown(): Promise<ImportResult | undefined> {
 
 async function exportScheduledJson(): Promise<void> {
   const result = await dialog.showSaveDialog({
-    title: '导出定时 JSON',
+    title: tr('dialog.exportScheduledJson'),
     defaultPath: 'scheduled-todos.json',
     filters: [{ name: 'JSON', extensions: ['json'] }]
   });
@@ -218,7 +243,7 @@ async function exportScheduledJson(): Promise<void> {
 
 async function importScheduledJson(): Promise<ImportResult | undefined> {
   const result = await dialog.showOpenDialog({
-    title: '导入定时 JSON',
+    title: tr('dialog.importScheduledJson'),
     filters: [{ name: 'JSON', extensions: ['json'] }],
     properties: ['openFile']
   });
@@ -235,8 +260,8 @@ async function importPetZip(zipPath?: string): Promise<PetPackage | undefined> {
   let selectedPath = zipPath;
   if (!selectedPath) {
     const result = await dialog.showOpenDialog({
-      title: '导入 Codex 宠物 Zip',
-      filters: [{ name: 'Zip files', extensions: ['zip'] }],
+      title: tr('dialog.importCodexPetZip'),
+      filters: [{ name: tr('dialog.zipFiles'), extensions: ['zip'] }],
       properties: ['openFile']
     });
     selectedPath = result.filePaths[0];
@@ -274,68 +299,79 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
           checked: selectedPetId === pet.id,
           click: () => mainWindow?.webContents.send('ui:selectPet', pet.id)
         }))
-      : [{ label: '未找到宠物', enabled: false }];
+      : [{ label: tr('menu.noPetsFound'), enabled: false }];
   const menu = Menu.buildFromTemplate([
     {
-      label: '显示/隐藏 TODO 面板',
+      label: tr('menu.showHideTodoPanel'),
       click: () => mainWindow?.webContents.send('ui:toggleTodoPanel')
     },
     {
-      label: '定时 TODO',
+      label: tr('menu.scheduledTodos'),
       click: () => mainWindow?.webContents.send('ui:toggleSchedulePanel')
+    },
+    {
+      label: tr('menu.language'),
+      submenu: languageOptions.map((option) => ({
+        label: option.label,
+        type: 'radio',
+        checked: currentLanguage === option.language,
+        click: async () => {
+          await setAppLanguage(option.language);
+        }
+      }))
     },
     { type: 'separator' },
     {
-      label: '打开 Markdown',
+      label: tr('menu.openMarkdown'),
       click: async () => {
         await openTodoSource();
       }
     },
     {
-      label: '导出 TODO Markdown',
+      label: tr('menu.exportTodoMarkdown'),
       click: async () => {
         await exportTodoMarkdown();
       }
     },
     {
-      label: '导入 TODO Markdown',
+      label: tr('menu.importTodoMarkdown'),
       click: async () => {
         await importTodoMarkdown();
       }
     },
     {
-      label: '导出定时 JSON',
+      label: tr('menu.exportScheduledJson'),
       click: async () => {
         await exportScheduledJson();
       }
     },
     {
-      label: '导入定时 JSON',
+      label: tr('menu.importScheduledJson'),
       click: async () => {
         await importScheduledJson();
       }
     },
     { type: 'separator' },
     {
-      label: '切换宠物风格',
+      label: tr('menu.switchPet'),
       submenu: petItems
     },
     { type: 'separator' },
     {
-      label: '导入宠物 Zip',
+      label: tr('menu.importPetZip'),
       click: async () => {
         await importPetZip();
       }
     },
     {
-      label: '刷新宠物',
+      label: tr('menu.refreshPets'),
       click: async () => {
         await sendPetsChanged();
       }
     },
     { type: 'separator' },
     {
-      label: '退出',
+      label: tr('menu.quit'),
       click: () => app.quit()
     }
   ]);
@@ -358,34 +394,34 @@ function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoIte
   const { item, point } = payload;
   const menu = Menu.buildFromTemplate([
     {
-      label: '编辑',
+      label: tr('menu.edit'),
       click: () => sendTodoMenuAction({ type: 'edit', id: item.id })
     },
     {
-      label: item.completed ? '标记未完成' : '标记完成',
+      label: item.completed ? tr('menu.markActive') : tr('menu.markDone'),
       click: () => sendTodoMenuAction({ type: 'toggle-completed', id: item.id })
     },
     {
-      label: item.highlighted ? '取消标红' : '标红',
+      label: item.highlighted ? tr('menu.unmarkRed') : tr('menu.markRed'),
       click: () => sendTodoMenuAction({ type: 'toggle-highlighted', id: item.id })
     },
     {
-      label: '调整优先级',
+      label: tr('menu.adjustPriority'),
       enabled: !item.completed,
       submenu: [
         {
-          label: '上移',
+          label: tr('menu.moveUp'),
           click: () => sendTodoMenuAction({ type: 'move-up', id: item.id })
         },
         {
-          label: '下移',
+          label: tr('menu.moveDown'),
           click: () => sendTodoMenuAction({ type: 'move-down', id: item.id })
         }
       ]
     },
     { type: 'separator' },
     {
-      label: '删除',
+      label: tr('menu.delete'),
       click: () => sendTodoMenuAction({ type: 'delete', id: item.id })
     }
   ]);
@@ -477,6 +513,9 @@ function registerIpc(): void {
     return importScheduledJson();
   });
 
+  ipcMain.handle('settings:getLanguage', () => currentLanguage);
+  ipcMain.handle('settings:setLanguage', async (_event, language: AppLanguage) => setAppLanguage(language));
+
   ipcMain.handle('pets:list', async () => listPetsWithUrls());
   ipcMain.handle('pets:select', async (_event, id: string) => petRegistry.findById(id));
   ipcMain.handle('pets:reload', async () => {
@@ -563,6 +602,8 @@ app.whenReady().then(async () => {
   const paths = getAppPaths();
   todoStore = new TodoMarkdownStore(paths.todoFile);
   scheduledTodoStore = new ScheduledTodoStore(paths.scheduledTodosFile);
+  settingsStore = new AppSettingsStore(paths.settingsFile);
+  currentLanguage = await settingsStore.getLanguage();
   petRegistry = new PetRegistry({
     codexPets: paths.codexPets,
     appPets: paths.appPets,

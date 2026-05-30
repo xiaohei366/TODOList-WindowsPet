@@ -68,6 +68,29 @@ describe('schedule form helpers', () => {
     ).toBe('每周 123 09:05');
   });
 
+  test('formats schedule summaries and validation messages in English', () => {
+    expect(
+      formatScheduleSummary(
+        {
+          id: 'rule',
+          kind: 'weekly',
+          enabled: true,
+          text: 'Daily',
+          hour: 9,
+          minute: 5,
+          weekdays: [1, 2, 3],
+          createdAt: '2026-05-28T00:00:00.000Z',
+          updatedAt: '2026-05-28T00:00:00.000Z'
+        },
+        'en-US'
+      )
+    ).toBe('Weekly 123 09:05');
+
+    expect(() =>
+      buildScheduleInput({ ...createEmptyScheduleForm(), text: 'Bad minute', hour: '23', minute: '60' }, new Date(), 'en-US')
+    ).toThrow('Minute must be 0-59.');
+  });
+
   test('does not show a done suffix for one-time schedule summaries', () => {
     expect(
       formatScheduleSummary({

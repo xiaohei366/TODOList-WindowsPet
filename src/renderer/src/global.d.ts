@@ -1,4 +1,5 @@
 import type { ImportResult, PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
+import type { AppLanguage } from '../../shared/i18n';
 
 declare global {
   interface Window {
@@ -33,6 +34,11 @@ declare global {
         importZip: (path?: string) => Promise<PetPackage | undefined>;
         reload: () => Promise<PetPackage[]>;
         onChanged: (listener: (pets: PetPackage[]) => void) => () => void;
+      };
+      settings: {
+        getLanguage: () => Promise<AppLanguage>;
+        setLanguage: (language: AppLanguage) => Promise<AppLanguage>;
+        onLanguageChanged: (listener: (language: AppLanguage) => void) => () => void;
       };
       ui: {
         showPetMenu: (point: { x: number; y: number }) => Promise<void>;

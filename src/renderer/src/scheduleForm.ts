@@ -1,4 +1,5 @@
 import type { ScheduledTodoInput, ScheduledTodoRule } from '../../shared/types';
+import { type AppLanguage, defaultLanguage, t } from '../../shared/i18n';
 
 export const weekdayOptions = [
   { value: 1, label: '1' },
@@ -62,13 +63,17 @@ export function scheduleRuleToForm(rule: ScheduledTodoRule): ScheduleFormState {
   };
 }
 
-export function buildScheduleInput(form: ScheduleFormState, now = new Date()): ScheduledTodoInput {
+export function buildScheduleInput(
+  form: ScheduleFormState,
+  now = new Date(),
+  language: AppLanguage = defaultLanguage
+): ScheduledTodoInput {
   const text = form.text.trim();
   if (!text) {
-    throw new Error('TODO 内容必填。');
+    throw new Error(t(language, 'validation.todoRequired'));
   }
-  const hour = parseRequiredNumber(form.hour, 0, 23, '小时需为 0-23。');
-  const minute = parseRequiredNumber(form.minute, 0, 59, '分钟需为 0-59。');
+  const hour = parseRequiredNumber(form.hour, 0, 23, t(language, 'validation.hourRange'));
+  const minute = parseRequiredNumber(form.minute, 0, 59, t(language, 'validation.minuteRange'));
 
   if (form.kind === 'weekly') {
     return {
@@ -81,12 +86,12 @@ export function buildScheduleInput(form: ScheduleFormState, now = new Date()): S
     };
   }
 
-  const year = parseOptionalNumber(form.year, 1, 9999, '年份无效。');
-  const month = parseOptionalNumber(form.month, 1, 12, '月份需为 1-12。');
+  const year = parseOptionalNumber(form.year, 1, 9999, t(language, 'validation.invalidYear'));
+  const month = parseOptionalNumber(form.month, 1, 12, t(language, 'validation.monthRange'));
   const resolvedYear = year ?? now.getFullYear();
   const resolvedMonth = month ?? now.getMonth() + 1;
   const maxDay = daysInMonth(resolvedYear, resolvedMonth);
-  const day = parseOptionalNumber(form.day, 1, maxDay, `日期需为 1-${maxDay}。`);
+  const day = parseOptionalNumber(form.day, 1, maxDay, t(language, 'validation.dayRange', { max: maxDay }));
 
   return {
     kind: 'one-time',
@@ -106,12 +111,12 @@ export function getScheduleFormMaxDay(form: ScheduleFormState, now = new Date())
   return daysInMonth(year, month);
 }
 
-export function formatScheduleSummary(rule: ScheduledTodoRule): string {
+export function formatScheduleSummary(rule: ScheduledTodoRule, language: AppLanguage = defaultLanguage): string {
   const time = `${String(rule.hour).padStart(2, '0')}:${String(rule.minute).padStart(2, '0')}`;
   if (rule.kind === 'one-time') {
     return `${rule.date} ${time}`;
   }
-  return `每周 ${rule.weekdays.map((day) => weekdayOptions.find((weekday) => weekday.value === day)?.label ?? day).join('')} ${time}`;
+  return `${t(language, 'schedule.weeklyPrefix')} ${rule.weekdays.map((day) => weekdayOptions.find((weekday) => weekday.value === day)?.label ?? day).join('')} ${time}`;
 }
 
 function parseRequiredNumber(value: string, min: number, max: number, message: string): number {

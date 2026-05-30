@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ImportResult, PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../shared/types';
+import type { AppLanguage } from '../shared/i18n';
 
 type Listener<T> = (payload: T) => void;
 
@@ -44,6 +45,11 @@ contextBridge.exposeInMainWorld('todoPet', {
     importZip: (path?: string): Promise<PetPackage | undefined> => ipcRenderer.invoke('pets:importZip', path),
     reload: (): Promise<PetPackage[]> => ipcRenderer.invoke('pets:reload'),
     onChanged: (listener: Listener<PetPackage[]>): (() => void) => onPayload('pets:changed', listener)
+  },
+  settings: {
+    getLanguage: (): Promise<AppLanguage> => ipcRenderer.invoke('settings:getLanguage'),
+    setLanguage: (language: AppLanguage): Promise<AppLanguage> => ipcRenderer.invoke('settings:setLanguage', language),
+    onLanguageChanged: (listener: Listener<AppLanguage>): (() => void) => onPayload('settings:languageChanged', listener)
   },
   ui: {
     showPetMenu: (point: { x: number; y: number }): Promise<void> => ipcRenderer.invoke('ui:showPetMenu', point),
