@@ -21,7 +21,7 @@ import { getAppPaths } from './paths';
 import { AppSettingsStore } from './appSettings';
 import { getNextScheduledRunDate, runDueScheduledTodos, ScheduledTodoStore } from './scheduledTodos';
 import { keepPetWindowOnTop, setPetWindowMousePassthrough } from './windowLayering';
-import { constrainWindowPosition } from './windowBounds';
+import { constrainWindowPosition, getWindowDragPosition, type Position, type Rect } from './windowBounds';
 import type { ImportResult, PetPackage, ScheduledTodoInput, TodoItem, TodoMenuAction } from '../shared/types';
 import { type AppLanguage, type I18nKey, defaultLanguage, languageOptions, normalizeLanguage, t } from '../shared/i18n';
 
@@ -45,6 +45,7 @@ let settingsStore: AppSettingsStore;
 let scheduledTodoTimer: NodeJS.Timeout | undefined;
 let petRegistry: PetRegistry;
 let currentLanguage: AppLanguage = defaultLanguage;
+const windowDragSessions = new WeakMap<BrowserWindow, { startBounds: Rect; startPointer: Position }>();
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
@@ -544,6 +545,39 @@ function registerIpc(): void {
     const display = screen.getDisplayMatching({ ...bounds, ...proposed });
     const next = constrainWindowPosition(proposed, bounds, display.workArea);
     window.setPosition(next.x, next.y, false);
+    keepPetWindowOnTop(window);
+  });
+  ipcMain.on('window:dragStart', (event, screenX: number, screenY: number) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      return;
+    }
+    windowDragSessions.set(window, {
+      startBounds: window.getBounds(),
+      startPointer: { x: screenX, y: screenY }
+    });
+    keepPetWindowOnTop(window);
+  });
+  ipcMain.on('window:dragMove', (event, screenX: number, screenY: number) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      return;
+    }
+    const drag = windowDragSessions.get(window);
+    if (!drag) {
+      return;
+    }
+    const proposed = getWindowDragPosition(drag.startBounds, drag.startPointer, { x: screenX, y: screenY });
+    const display = screen.getDisplayMatching({ ...drag.startBounds, ...proposed });
+    const next = constrainWindowPosition(proposed, drag.startBounds, display.workArea);
+    window.setPosition(next.x, next.y, false);
+  });
+  ipcMain.on('window:dragEnd', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      return;
+    }
+    windowDragSessions.delete(window);
     keepPetWindowOnTop(window);
   });
   ipcMain.handle('window:setMousePassthrough', (event, ignore: boolean) => {

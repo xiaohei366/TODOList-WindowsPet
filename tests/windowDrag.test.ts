@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { constrainWindowPosition } from '../src/main/windowBounds';
+import { constrainWindowPosition, getWindowDragPosition } from '../src/main/windowBounds';
 import { hasExceededPetWindowDragThreshold } from '../src/renderer/src/windowDrag';
 
 describe('pet window drag helpers', () => {
@@ -19,6 +19,19 @@ describe('pet window drag helpers', () => {
     expect(constrainWindowPosition({ x: 5000, y: 5000 }, windowSize, workArea)).toEqual({
       x: 1840,
       y: 1000
+    });
+  });
+
+  test('calculates the dragged window position from the drag origin and latest pointer position', () => {
+    expect(
+      getWindowDragPosition(
+        { x: 240, y: 320 },
+        { x: 500, y: 600 },
+        { x: 535.4, y: 572.6 }
+      )
+    ).toEqual({
+      x: 275,
+      y: 293
     });
   });
 });

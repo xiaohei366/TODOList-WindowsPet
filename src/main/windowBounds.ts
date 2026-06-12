@@ -27,6 +27,13 @@ export function constrainWindowPosition(position: Position, windowSize: Rect, wo
   };
 }
 
+export function getWindowDragPosition(startWindow: Position, startPointer: Position, currentPointer: Position): Position {
+  return {
+    x: Math.round(startWindow.x + currentPointer.x - startPointer.x),
+    y: Math.round(startWindow.y + currentPointer.y - startPointer.y)
+  };
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }

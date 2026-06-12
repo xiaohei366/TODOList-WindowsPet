@@ -50,6 +50,9 @@ declare global {
       };
       window: {
         moveBy: (deltaX: number, deltaY: number) => Promise<void>;
+        startDrag: (screenX: number, screenY: number) => void;
+        moveDrag: (screenX: number, screenY: number) => void;
+        endDrag: () => void;
         setMousePassthrough: (ignore: boolean) => Promise<void>;
         quit: () => Promise<void>;
       };

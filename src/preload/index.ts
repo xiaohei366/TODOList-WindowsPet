@@ -62,6 +62,9 @@ contextBridge.exposeInMainWorld('todoPet', {
   },
   window: {
     moveBy: (deltaX: number, deltaY: number): Promise<void> => ipcRenderer.invoke('window:moveBy', deltaX, deltaY),
+    startDrag: (screenX: number, screenY: number): void => ipcRenderer.send('window:dragStart', screenX, screenY),
+    moveDrag: (screenX: number, screenY: number): void => ipcRenderer.send('window:dragMove', screenX, screenY),
+    endDrag: (): void => ipcRenderer.send('window:dragEnd'),
     setMousePassthrough: (ignore: boolean): Promise<void> => ipcRenderer.invoke('window:setMousePassthrough', ignore),
     quit: (): Promise<void> => ipcRenderer.invoke('window:quit')
   }

@@ -47,9 +47,14 @@ export function App(): ReactElement {
   const [petHovered, setPetHovered] = useState(false);
   const [transientState, setTransientState] = useState<PetState | null>(null);
   const longPressTimer = useRef<number | undefined>(undefined);
-  const windowDrag = useRef<{ startX: number; startY: number; lastX: number; lastY: number; dragging: boolean } | null>(
-    null
-  );
+  const windowDrag = useRef<{
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    dragging: boolean;
+    lastDirection: 'running-left' | 'running-right' | null;
+  } | null>(null);
   const resizeStart = useRef<{ x: number; y: number; scale: number } | null>(null);
   const mouseInputCaptured = useRef(false);
   const mousePassthrough = useRef<boolean | null>(null);
@@ -458,7 +463,29 @@ export function App(): ReactElement {
       startY: event.screenY,
       lastX: event.screenX,
       lastY: event.screenY,
-      dragging: false
+      dragging: false,
+      lastDirection: null
+    };
+    window.todoPet.window.startDrag(event.screenX, event.screenY);
+
+    let pendingDragMove: { screenX: number; screenY: number } | null = null;
+    let dragAnimationFrame: number | null = null;
+
+    const flushDragMove = (): void => {
+      dragAnimationFrame = null;
+      if (!pendingDragMove) {
+        return;
+      }
+      const next = pendingDragMove;
+      pendingDragMove = null;
+      window.todoPet.window.moveDrag(next.screenX, next.screenY);
+    };
+
+    const scheduleDragMove = (screenX: number, screenY: number): void => {
+      pendingDragMove = { screenX, screenY };
+      if (dragAnimationFrame === null) {
+        dragAnimationFrame = window.requestAnimationFrame(flushDragMove);
+      }
     };
 
     const onMove = (moveEvent: globalThis.PointerEvent): void => {
@@ -479,18 +506,32 @@ export function App(): ReactElement {
       drag.lastX = moveEvent.screenX;
       drag.lastY = moveEvent.screenY;
       if (deltaX !== 0 || deltaY !== 0) {
-        setTransientState(deltaX < 0 ? 'running-left' : 'running-right');
-        void window.todoPet.window.moveBy(deltaX, deltaY);
+        const direction = deltaX < 0 ? 'running-left' : 'running-right';
+        if (drag.lastDirection !== direction) {
+          drag.lastDirection = direction;
+          setTransientState(direction);
+        }
+        scheduleDragMove(moveEvent.screenX, moveEvent.screenY);
       }
     };
 
     const stopDragging = (upEvent: globalThis.PointerEvent): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', stopDragging);
+      const drag = windowDrag.current;
+      if (dragAnimationFrame !== null) {
+        window.cancelAnimationFrame(dragAnimationFrame);
+        dragAnimationFrame = null;
+      }
+      if (drag?.dragging) {
+        window.todoPet.window.moveDrag(upEvent.screenX, upEvent.screenY);
+      }
+      pendingDragMove = null;
       if (target.hasPointerCapture(pointerId)) {
         target.releasePointerCapture(pointerId);
       }
       windowDrag.current = null;
+      window.todoPet.window.endDrag();
       setTransientState(null);
       setWindowMouseInputCaptured(false);
       updateWindowMousePassthroughFromPoint(upEvent.clientX, upEvent.clientY);
