@@ -329,28 +329,38 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
       }
     },
     {
-      label: tr('menu.exportTodoMarkdown'),
-      click: async () => {
-        await exportTodoMarkdown();
-      }
+      label: tr('menu.exportData'),
+      submenu: [
+        {
+          label: tr('menu.exportTodoMarkdown'),
+          click: async () => {
+            await exportTodoMarkdown();
+          }
+        },
+        {
+          label: tr('menu.exportScheduledJson'),
+          click: async () => {
+            await exportScheduledJson();
+          }
+        }
+      ]
     },
     {
-      label: tr('menu.importTodoMarkdown'),
-      click: async () => {
-        await importTodoMarkdown();
-      }
-    },
-    {
-      label: tr('menu.exportScheduledJson'),
-      click: async () => {
-        await exportScheduledJson();
-      }
-    },
-    {
-      label: tr('menu.importScheduledJson'),
-      click: async () => {
-        await importScheduledJson();
-      }
+      label: tr('menu.importData'),
+      submenu: [
+        {
+          label: tr('menu.importTodoMarkdown'),
+          click: async () => {
+            await importTodoMarkdown();
+          }
+        },
+        {
+          label: tr('menu.importScheduledJson'),
+          click: async () => {
+            await importScheduledJson();
+          }
+        }
+      ]
     },
     { type: 'separator' },
     {
