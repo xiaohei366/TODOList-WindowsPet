@@ -458,11 +458,11 @@ export function App(): ReactElement {
 
   function getDeadlineInfo(deadline: string): { label: string; className: string } {
     const today = formatLocalDateKey(new Date());
-    const diffDays = Math.ceil((new Date(deadline).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round((new Date(deadline).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) {
       return { label: tr('todo.overdue'), className: 'todo-deadline--overdue' };
     }
-    if (diffDays <= 1) {
+    if (diffDays === 0) {
       return { label: tr('todo.dueToday'), className: 'todo-deadline--due-today' };
     }
     return { label: tr('todo.daysLeft', { count: diffDays }), className: '' };
