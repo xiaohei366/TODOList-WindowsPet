@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ImportResult, PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../shared/types';
+import type { PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../shared/types';
 import type { AppLanguage } from '../shared/i18n';
 
 type Listener<T> = (payload: T) => void;
@@ -23,8 +23,6 @@ contextBridge.exposeInMainWorld('todoPet', {
     updateNotes: (id: string, notes: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateNotes', id, notes),
     reorder: (date: string, ids: string[]): Promise<TodoItem[]> => ipcRenderer.invoke('todos:reorder', date, ids),
     reorderVisible: (ids: string[]): Promise<TodoItem[]> => ipcRenderer.invoke('todos:reorderVisible', ids),
-    exportMarkdown: (): Promise<void> => ipcRenderer.invoke('todos:exportMarkdown'),
-    importMarkdown: (): Promise<ImportResult | undefined> => ipcRenderer.invoke('todos:importMarkdown'),
     openSource: (): Promise<void> => ipcRenderer.invoke('todos:openSource'),
     onChanged: (listener: Listener<TodoItem[]>): (() => void) => onPayload('todos:changed', listener)
   },
@@ -36,8 +34,6 @@ contextBridge.exposeInMainWorld('todoPet', {
     delete: (id: string): Promise<void> => ipcRenderer.invoke('schedules:delete', id),
     setEnabled: (id: string, enabled: boolean): Promise<ScheduledTodoRule> =>
       ipcRenderer.invoke('schedules:setEnabled', id, enabled),
-    exportJson: (): Promise<void> => ipcRenderer.invoke('schedules:exportJson'),
-    importJson: (): Promise<ImportResult | undefined> => ipcRenderer.invoke('schedules:importJson'),
     onChanged: (listener: Listener<ScheduledTodoRule[]>): (() => void) => onPayload('schedules:changed', listener)
   },
   pets: {

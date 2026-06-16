@@ -253,10 +253,14 @@ export class TodoMarkdownStore {
   }
 
   async importMarkdown(importPath: string): Promise<ImportResult> {
-    const importedContent = await readFile(importPath, 'utf8');
+    const content = await readFile(importPath, 'utf8');
+    return this.importMarkdownFromContent(content);
+  }
+
+  async importMarkdownFromContent(content: string): Promise<ImportResult> {
     const todayKey = formatDateKey(this.clock());
     const current = await this.readItems();
-    const imported = parseTodoMarkdown(importedContent, todayKey);
+    const imported = parseTodoMarkdown(content, todayKey);
     const seen = new Set(current.map(todoMergeKey));
     let added = 0;
     let skipped = 0;
@@ -325,6 +329,15 @@ export class TodoMarkdownStore {
       await writeFile(this.filePath, '', 'utf8');
     }
     return this.filePath;
+  }
+
+  async readSourceContent(): Promise<string> {
+    await this.ensureParent();
+    try {
+      return await readFile(this.filePath, 'utf8');
+    } catch {
+      return '';
+    }
   }
 
   private async findUpdated(target: TodoItem): Promise<TodoItem> {

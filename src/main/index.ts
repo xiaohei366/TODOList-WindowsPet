@@ -12,8 +12,8 @@ import {
   Tray
 } from 'electron';
 import { watch, type FSWatcher } from 'node:fs';
-import { copyFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import JSZip from 'jszip';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TodoMarkdownStore } from './todoStore';
 import { PetRegistry } from './petRegistry';
@@ -202,59 +202,109 @@ async function openTodoSource(): Promise<void> {
   await shell.openPath(filePath);
 }
 
-async function exportTodoMarkdown(): Promise<void> {
-  const source = await todoStore.openPath();
+async function exportDataZip(): Promise<void> {
   const result = await dialog.showSaveDialog({
-    title: tr('dialog.exportTodoMarkdown'),
-    defaultPath: 'todos.md',
-    filters: [{ name: 'Markdown', extensions: ['md'] }]
+    title: tr('dialog.exportDataZip'),
+    defaultPath: 'tolist-data.zip',
+    filters: [{ name: tr('dialog.zipFiles'), extensions: ['zip'] }]
   });
   if (result.canceled || !result.filePath) {
     return;
   }
-  await copyFile(source, result.filePath);
+
+  const zip = new JSZip();
+  const todoContent = await todoStore.readSourceContent();
+  zip.file('todos.md', todoContent);
+  const scheduleContent = await scheduledTodoStore.readSourceContent();
+  zip.file('scheduled-todos.json', scheduleContent);
+
+  const blob = await zip.generateAsync({ type: 'nodebuffer' });
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(result.filePath, blob);
 }
 
-async function importTodoMarkdown(): Promise<ImportResult | undefined> {
+const ALLOWED_ARCHIVE_ENTRIES = new Set(['todos.md', 'scheduled-todos.json']);
+
+async function importDataZip(): Promise<void> {
   const result = await dialog.showOpenDialog({
-    title: tr('dialog.importTodoMarkdown'),
-    filters: [{ name: 'Markdown', extensions: ['md'] }],
+    title: tr('dialog.importDataZip'),
+    filters: [{ name: tr('dialog.zipFiles'), extensions: ['zip'] }],
     properties: ['openFile']
   });
   const selectedPath = result.filePaths[0];
   if (!selectedPath) {
-    return undefined;
-  }
-  const imported = await todoStore.importMarkdown(selectedPath);
-  await sendTodosChanged();
-  return imported;
-}
-
-async function exportScheduledJson(): Promise<void> {
-  const result = await dialog.showSaveDialog({
-    title: tr('dialog.exportScheduledJson'),
-    defaultPath: 'scheduled-todos.json',
-    filters: [{ name: 'JSON', extensions: ['json'] }]
-  });
-  if (result.canceled || !result.filePath) {
     return;
   }
-  await scheduledTodoStore.exportJson(result.filePath);
+
+  const { readFile } = await import('node:fs/promises');
+  const data = await readFile(selectedPath);
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(data);
+  } catch {
+    await showImportError(tr('dialog.importInvalidContent'));
+    return;
+  }
+
+  // Validate: only allowed entries
+  const entryNames = Object.keys(zip.files);
+  for (const name of entryNames) {
+    if (zip.files[name].dir) continue;
+    if (!ALLOWED_ARCHIVE_ENTRIES.has(name)) {
+      await showImportError(tr('dialog.importInvalidFile'));
+      return;
+    }
+  }
+
+  const hasTodo = entryNames.includes('todos.md');
+  const hasSchedule = entryNames.includes('scheduled-todos.json');
+  if (!hasTodo && !hasSchedule) {
+    await showImportError(tr('dialog.importEmptyArchive'));
+    return;
+  }
+
+  let todoAdded = 0;
+  let todoSkipped = 0;
+  let scheduleAdded = 0;
+  let scheduleUpdated = 0;
+  let scheduleSkipped = 0;
+
+  if (hasTodo) {
+    const content = await zip.file('todos.md')!.async('string');
+    if (!/^###\s+\d{4}-\d{2}-\d{2}/m.test(content) && !/^\s*-\s+\[[ xX]\]\s+/m.test(content)) {
+      await showImportError(tr('dialog.importInvalidContent'));
+      return;
+    }
+    const imported = await todoStore.importMarkdownFromContent(content);
+    todoAdded = imported.added;
+    todoSkipped = imported.skipped;
+    await sendTodosChanged();
+  }
+
+  if (hasSchedule) {
+    const content = await zip.file('scheduled-todos.json')!.async('string');
+    try {
+      JSON.parse(content);
+    } catch {
+      await showImportError(tr('dialog.importInvalidContent'));
+      return;
+    }
+    const imported = await scheduledTodoStore.importJsonFromContent(content);
+    scheduleAdded = imported.added;
+    scheduleUpdated = imported.updated ?? 0;
+    scheduleSkipped = imported.skipped;
+    await afterScheduleMutation(true);
+  }
 }
 
-async function importScheduledJson(): Promise<ImportResult | undefined> {
-  const result = await dialog.showOpenDialog({
-    title: tr('dialog.importScheduledJson'),
-    filters: [{ name: 'JSON', extensions: ['json'] }],
-    properties: ['openFile']
+async function showImportError(message: string): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  await dialog.showMessageBox(mainWindow, {
+    type: 'error',
+    title: tr('dialog.importDataZip'),
+    message,
+    buttons: ['OK']
   });
-  const selectedPath = result.filePaths[0];
-  if (!selectedPath) {
-    return undefined;
-  }
-  const imported = await scheduledTodoStore.importJson(selectedPath);
-  await afterScheduleMutation(true);
-  return imported;
 }
 
 async function importPetZip(zipPath?: string): Promise<PetPackage | undefined> {
@@ -330,37 +380,15 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
     },
     {
       label: tr('menu.exportData'),
-      submenu: [
-        {
-          label: tr('menu.exportTodoMarkdown'),
-          click: async () => {
-            await exportTodoMarkdown();
-          }
-        },
-        {
-          label: tr('menu.exportScheduledJson'),
-          click: async () => {
-            await exportScheduledJson();
-          }
-        }
-      ]
+      click: async () => {
+        await exportDataZip();
+      }
     },
     {
       label: tr('menu.importData'),
-      submenu: [
-        {
-          label: tr('menu.importTodoMarkdown'),
-          click: async () => {
-            await importTodoMarkdown();
-          }
-        },
-        {
-          label: tr('menu.importScheduledJson'),
-          click: async () => {
-            await importScheduledJson();
-          }
-        }
-      ]
+      click: async () => {
+        await importDataZip();
+      }
     },
     { type: 'separator' },
     {
@@ -497,12 +525,6 @@ function registerIpc(): void {
     await sendTodosChanged();
     return items;
   });
-  ipcMain.handle('todos:exportMarkdown', async () => {
-    await exportTodoMarkdown();
-  });
-  ipcMain.handle('todos:importMarkdown', async () => {
-    return importTodoMarkdown();
-  });
   ipcMain.handle('todos:openSource', async () => {
     await openTodoSource();
   });
@@ -527,13 +549,6 @@ function registerIpc(): void {
     await afterScheduleMutation(true);
     return rule;
   });
-  ipcMain.handle('schedules:exportJson', async () => {
-    await exportScheduledJson();
-  });
-  ipcMain.handle('schedules:importJson', async () => {
-    return importScheduledJson();
-  });
-
   ipcMain.handle('settings:getLanguage', () => currentLanguage);
   ipcMain.handle('settings:setLanguage', async (_event, language: AppLanguage) => setAppLanguage(language));
 

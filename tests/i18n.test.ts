@@ -19,14 +19,12 @@ describe('i18n helpers', () => {
   test('translates native and renderer labels', () => {
     expect(t('zh-CN', 'menu.language')).toBe('语言');
     expect(t('en-US', 'menu.language')).toBe('Language');
-    expect(t('zh-CN', 'menu.exportTodoMarkdown')).toBe('导出 TODO 项');
-    expect(t('zh-CN', 'menu.importScheduledJson')).toBe('导入定时任务');
+    expect(t('zh-CN', 'menu.exportData')).toBe('导出数据');
+    expect(t('zh-CN', 'menu.importData')).toBe('导入数据');
     expect(t('zh-CN', 'menu.openMarkdown')).toBe('打开存储数据的原始文件');
-    expect(t('zh-CN', 'menu.openTodoMarkdown')).toBe('打开存储数据的原始文件');
-    expect(t('en-US', 'menu.exportTodoMarkdown')).toBe('Export TODO Items');
-    expect(t('en-US', 'menu.importScheduledJson')).toBe('Import Scheduled Tasks');
+    expect(t('en-US', 'menu.exportData')).toBe('Export Data');
+    expect(t('en-US', 'menu.importData')).toBe('Import Data');
     expect(t('en-US', 'menu.openMarkdown')).toBe('Open Raw Data File');
-    expect(t('en-US', 'menu.openTodoMarkdown')).toBe('Open Raw Data File');
     expect(t('zh-CN', 'todo.completedToday', { count: 3 })).toBe('今日已完成 3 个任务');
     expect(t('en-US', 'todo.completedToday', { count: 3 })).toBe('3 tasks completed today');
   });

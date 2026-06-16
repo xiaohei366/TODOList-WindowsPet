@@ -99,8 +99,22 @@ export class ScheduledTodoStore {
     await copyFile(this.filePath, targetPath);
   }
 
+  async readSourceContent(): Promise<string> {
+    await this.ensureFile();
+    try {
+      return await readFile(this.filePath, 'utf8');
+    } catch {
+      return '[]';
+    }
+  }
+
   async importJson(importPath: string): Promise<ImportResult> {
-    const imported = parseScheduleDocument(await readFile(importPath, 'utf8')).rules.map(normalizeStoredRule);
+    const content = await readFile(importPath, 'utf8');
+    return this.importJsonFromContent(content);
+  }
+
+  async importJsonFromContent(content: string): Promise<ImportResult> {
+    const imported = parseScheduleDocument(content).rules.map(normalizeStoredRule);
     const document = await this.readDocument();
     const next = [...document.rules];
     const semanticKeys = new Set(next.map(semanticScheduleKey));

@@ -1,4 +1,4 @@
-import type { ImportResult, PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
+import type { PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
 import type { AppLanguage } from '../../shared/i18n';
 
 declare global {
@@ -14,8 +14,6 @@ declare global {
         updateNotes: (id: string, notes: string) => Promise<TodoItem>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
         reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
-        exportMarkdown: () => Promise<void>;
-        importMarkdown: () => Promise<ImportResult | undefined>;
         openSource: () => Promise<void>;
         onChanged: (listener: (items: TodoItem[]) => void) => () => void;
       };
@@ -25,8 +23,6 @@ declare global {
         update: (id: string, input: ScheduledTodoInput) => Promise<ScheduledTodoRule>;
         delete: (id: string) => Promise<void>;
         setEnabled: (id: string, enabled: boolean) => Promise<ScheduledTodoRule>;
-        exportJson: () => Promise<void>;
-        importJson: () => Promise<ImportResult | undefined>;
         onChanged: (listener: (rules: ScheduledTodoRule[]) => void) => () => void;
       };
       pets: {
