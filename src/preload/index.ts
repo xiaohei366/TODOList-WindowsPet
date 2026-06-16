@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../shared/types';
+import type { PetPackage, ScheduledTodoInput, ScheduledTodoRule, SubTaskMenuAction, TodoItem, TodoMenuAction, TodoSubTask } from '../shared/types';
 import type { AppLanguage } from '../shared/i18n';
 
 type Listener<T> = (payload: T) => void;
@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('todoPet', {
     updateText: (id: string, text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateText', id, text),
     updateNotes: (id: string, notes: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateNotes', id, notes),
     setDeadline: (id: string, deadline: string | undefined): Promise<TodoItem> => ipcRenderer.invoke('todos:setDeadline', id, deadline),
+    addSubTask: (parentId: string, text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:addSubTask', parentId, text),
+    updateSubTask: (parentId: string, subTaskId: string, text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateSubTask', parentId, subTaskId, text),
+    setSubTaskCompleted: (parentId: string, subTaskId: string, completed: boolean): Promise<TodoItem> => ipcRenderer.invoke('todos:setSubTaskCompleted', parentId, subTaskId, completed),
+    setSubTaskDeadline: (parentId: string, subTaskId: string, deadline: string | undefined): Promise<TodoItem> => ipcRenderer.invoke('todos:setSubTaskDeadline', parentId, subTaskId, deadline),
+    deleteSubTask: (parentId: string, subTaskId: string): Promise<TodoItem> => ipcRenderer.invoke('todos:deleteSubTask', parentId, subTaskId),
+    moveSubTask: (parentId: string, subTaskId: string, direction: 'up' | 'down'): Promise<TodoItem> => ipcRenderer.invoke('todos:moveSubTask', parentId, subTaskId, direction),
     reorder: (date: string, ids: string[]): Promise<TodoItem[]> => ipcRenderer.invoke('todos:reorder', date, ids),
     reorderVisible: (ids: string[]): Promise<TodoItem[]> => ipcRenderer.invoke('todos:reorderVisible', ids),
     openSource: (): Promise<void> => ipcRenderer.invoke('todos:openSource'),
@@ -53,10 +59,13 @@ contextBridge.exposeInMainWorld('todoPet', {
     showPetMenu: (point: { x: number; y: number }): Promise<void> => ipcRenderer.invoke('ui:showPetMenu', point),
     showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }): Promise<void> =>
       ipcRenderer.invoke('ui:showTodoMenu', payload),
+    showSubTaskMenu: (payload: { point: { x: number; y: number }; parentId: string; subTask: TodoSubTask }): Promise<void> =>
+      ipcRenderer.invoke('ui:showSubTaskMenu', payload),
     onToggleTodoPanel: (listener: Listener<void>): (() => void) => onPayload('ui:toggleTodoPanel', listener),
     onToggleSchedulePanel: (listener: Listener<void>): (() => void) => onPayload('ui:toggleSchedulePanel', listener),
     onSelectPet: (listener: Listener<string>): (() => void) => onPayload('ui:selectPet', listener),
-    onTodoAction: (listener: Listener<TodoMenuAction>): (() => void) => onPayload('ui:todoAction', listener)
+    onTodoAction: (listener: Listener<TodoMenuAction>): (() => void) => onPayload('ui:todoAction', listener),
+    onSubTaskAction: (listener: Listener<SubTaskMenuAction>): (() => void) => onPayload('ui:subTaskAction', listener)
   },
   window: {
     moveBy: (deltaX: number, deltaY: number): Promise<void> => ipcRenderer.invoke('window:moveBy', deltaX, deltaY),

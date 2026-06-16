@@ -22,7 +22,7 @@ import { AppSettingsStore } from './appSettings';
 import { getNextScheduledRunDate, runDueScheduledTodos, ScheduledTodoStore } from './scheduledTodos';
 import { keepPetWindowOnTop, setPetWindowMousePassthrough } from './windowLayering';
 import { constrainWindowPosition, getWindowDragPosition, type Position, type Rect } from './windowBounds';
-import type { ImportResult, PetPackage, ScheduledTodoInput, TodoItem, TodoMenuAction } from '../shared/types';
+import type { ImportResult, PetPackage, ScheduledTodoInput, TodoItem, TodoMenuAction, SubTaskMenuAction, TodoSubTask } from '../shared/types';
 import { type AppLanguage, type I18nKey, defaultLanguage, languageOptions, normalizeLanguage, t } from '../shared/i18n';
 
 protocol.registerSchemesAsPrivileged([
@@ -468,10 +468,65 @@ function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoIte
       label: tr('menu.editNotes'),
       click: () => sendTodoMenuAction({ type: 'edit-notes', id: item.id })
     },
+    {
+      label: tr('menu.addSubTask'),
+      click: () => sendTodoMenuAction({ type: 'add-sub-task', id: item.id })
+    },
     { type: 'separator' },
     {
       label: tr('menu.delete'),
       click: () => sendTodoMenuAction({ type: 'delete', id: item.id })
+    }
+  ]);
+
+  menu.popup({ window: mainWindow, x: point?.x, y: point?.y });
+}
+
+function sendSubTaskMenuAction(action: SubTaskMenuAction): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.webContents.send('ui:subTaskAction', action);
+}
+
+function showSubTaskMenu(payload: { point?: { x: number; y: number }; parentId: string; subTask: TodoSubTask }): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  const { parentId, subTask, point } = payload;
+  const menu = Menu.buildFromTemplate([
+    {
+      label: tr('menu.edit'),
+      click: () => sendSubTaskMenuAction({ type: 'edit', parentId, subTaskId: subTask.id })
+    },
+    { type: 'separator' },
+    {
+      label: subTask.completed ? tr('menu.markActive') : tr('menu.markDone'),
+      click: () => sendSubTaskMenuAction({ type: 'toggle-completed', parentId, subTaskId: subTask.id })
+    },
+    {
+      label: subTask.deadline ? tr('menu.changeDeadline') : tr('menu.setDeadline'),
+      click: () => sendSubTaskMenuAction({ type: 'set-deadline', parentId, subTaskId: subTask.id })
+    },
+    {
+      label: tr('menu.adjustPriority'),
+      enabled: !subTask.completed,
+      submenu: [
+        {
+          label: tr('menu.moveUp'),
+          click: () => sendSubTaskMenuAction({ type: 'move-up', parentId, subTaskId: subTask.id })
+        },
+        {
+          label: tr('menu.moveDown'),
+          click: () => sendSubTaskMenuAction({ type: 'move-down', parentId, subTaskId: subTask.id })
+        }
+      ]
+    },
+    { type: 'separator' },
+    {
+      label: tr('menu.delete'),
+      click: () => sendSubTaskMenuAction({ type: 'delete', parentId, subTaskId: subTask.id })
     }
   ]);
 
@@ -524,6 +579,39 @@ function registerIpc(): void {
     const item = await todoStore.setDeadline(id, deadline);
     await sendTodosChanged();
     return item;
+  });
+  ipcMain.handle('todos:addSubTask', async (_event, parentId: string, text: string) => {
+    const item = await todoStore.addSubTask(parentId, text);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:updateSubTask', async (_event, parentId: string, subTaskId: string, text: string) => {
+    const item = await todoStore.updateSubTask(parentId, subTaskId, text);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:setSubTaskCompleted', async (_event, parentId: string, subTaskId: string, completed: boolean) => {
+    const item = await todoStore.setSubTaskCompleted(parentId, subTaskId, completed);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:setSubTaskDeadline', async (_event, parentId: string, subTaskId: string, deadline: string | undefined) => {
+    const item = await todoStore.setSubTaskDeadline(parentId, subTaskId, deadline);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:deleteSubTask', async (_event, parentId: string, subTaskId: string) => {
+    const item = await todoStore.deleteSubTask(parentId, subTaskId);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:moveSubTask', async (_event, parentId: string, subTaskId: string, direction: 'up' | 'down') => {
+    const item = await todoStore.moveSubTask(parentId, subTaskId, direction);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('ui:showSubTaskMenu', async (_event, payload: { point: { x: number; y: number }; parentId: string; subTask: TodoSubTask }) => {
+    showSubTaskMenu(payload);
   });
   ipcMain.handle('todos:reorder', async (_event, date: string, ids: string[]) => {
     const items = await todoStore.reorder(date, ids);

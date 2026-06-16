@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { ImportResult, TodoItem } from '../shared/types';
+import type { ImportResult, TodoItem, TodoSubTask } from '../shared/types';
 
 type ParsedTodo = TodoItem & {
   order: number;
@@ -58,9 +58,31 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
     const sourceLine = index + 1;
     const order = items.length;
 
-    // Collect note lines (indented sub-items: "  - note text")
+    // Collect sub-task lines (indented checkbox: "  - [ ] xxx" / "  - [x] xxx")
+    const subTasks: TodoSubTask[] = [];
+    let subIndex = index + 1;
+    while (subIndex < lines.length) {
+      const subMatch = /^  - \[([ xX])\] (.+)$/.exec(lines[subIndex]);
+      if (subMatch) {
+        const subCompleted = subMatch[1].toLowerCase() === 'x';
+        const subParsed = parseTodoBody(subMatch[2], subCompleted);
+        subTasks.push({
+          id: `${createTodoId(currentDate, sourceLine, parsed.text, completed, parsed.highlighted)}::${subTasks.length}`,
+          text: subParsed.text,
+          completed: subCompleted,
+          completedDate: subParsed.completedDate,
+          deadline: subParsed.deadline,
+          displayOrder: subTasks.length + 1
+        });
+        subIndex += 1;
+      } else {
+        break;
+      }
+    }
+
+    // Collect note lines (indented plain text: "  - note text", no checkbox)
     const noteLines: string[] = [];
-    let noteIndex = index + 1;
+    let noteIndex = subIndex;
     while (noteIndex < lines.length) {
       const noteMatch = /^  - (.+)$/.exec(lines[noteIndex]);
       if (noteMatch) {
@@ -83,7 +105,8 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
       sourceLine,
       order,
       notes: noteLines.join('\n'),
-      deadline: parsed.deadline
+      deadline: parsed.deadline,
+      subTasks
     });
 
     index = noteIndex;
@@ -125,6 +148,9 @@ export function renderTodoMarkdown(items: TodoItem[]): string {
     lines.push(`### ${date} ${weekdayName(date)}`, '');
     for (const item of orderedDayItems) {
       lines.push(formatTodoLine(item));
+      for (const sub of item.subTasks) {
+        lines.push(formatSubTaskLine(sub));
+      }
       if (item.notes) {
         for (const note of item.notes.split('\n')) {
           lines.push(`  - ${note}`);
@@ -168,7 +194,8 @@ export class TodoMarkdownStore {
       overdue: false,
       sourceLine: 0,
       order: items.length,
-      notes: ''
+      notes: '',
+      subTasks: []
     });
     await this.writeItems(items);
     const updated = await this.readItems();
@@ -262,6 +289,132 @@ export class TodoMarkdownStore {
 
     const updated = { ...target, deadline: deadline || undefined };
     const next = items.map((item) => (item.id === id ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async addSubTask(parentId: string, text: string): Promise<TodoItem> {
+    const cleaned = cleanTodoText(text);
+    if (!cleaned) {
+      throw new Error('Sub-task text is required.');
+    }
+
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const subTask: TodoSubTask = {
+      id: `${parentId}::${target.subTasks.length}`,
+      text: cleaned,
+      completed: false,
+      displayOrder: target.subTasks.length + 1
+    };
+    const updated = { ...target, subTasks: [...target.subTasks, subTask] };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async updateSubTask(parentId: string, subTaskId: string, text: string): Promise<TodoItem> {
+    const cleaned = cleanTodoText(text);
+    if (!cleaned) {
+      throw new Error('Sub-task text is required.');
+    }
+
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const subTasks = target.subTasks.map((sub) =>
+      sub.id === subTaskId ? { ...sub, text: cleaned } : sub
+    );
+    const updated = { ...target, subTasks };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async setSubTaskCompleted(parentId: string, subTaskId: string, completed: boolean): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const subTasks = target.subTasks.map((sub) =>
+      sub.id === subTaskId
+        ? { ...sub, completed, completedDate: completed ? formatDateKey(this.clock()) : undefined }
+        : sub
+    );
+    const updated = { ...target, subTasks };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async setSubTaskDeadline(parentId: string, subTaskId: string, deadline: string | undefined): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const subTasks = target.subTasks.map((sub) =>
+      sub.id === subTaskId ? { ...sub, deadline: deadline || undefined } : sub
+    );
+    const updated = { ...target, subTasks };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async deleteSubTask(parentId: string, subTaskId: string): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const subTasks = target.subTasks.filter((sub) => sub.id !== subTaskId);
+    const updated = { ...target, subTasks };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async moveSubTask(parentId: string, subTaskId: string, direction: 'up' | 'down'): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const active = target.subTasks.filter((sub) => !sub.completed);
+    const idx = active.findIndex((sub) => sub.id === subTaskId);
+    if (idx < 0) {
+      return this.findUpdated(target);
+    }
+
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= active.length) {
+      return this.findUpdated(target);
+    }
+
+    // Swap displayOrder between the two
+    const orderA = active[idx].displayOrder;
+    const orderB = active[swapIdx].displayOrder;
+    const subTasks = target.subTasks.map((sub) => {
+      if (sub.id === active[idx].id) return { ...sub, displayOrder: orderB };
+      if (sub.id === active[swapIdx].id) return { ...sub, displayOrder: orderA };
+      return sub;
+    });
+
+    const updated = { ...target, subTasks };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
     await this.writeItems(next);
     return this.findUpdated(updated);
   }
@@ -450,6 +603,14 @@ function formatTodoLine(item: TodoItem): string {
   const marker = item.highlighted ? '[!] ' : '';
   const text = item.completed ? `~~${item.text}~~` : item.text;
   return `- [${checkbox}] ${order}${ddl}${done}${marker}${text}`;
+}
+
+function formatSubTaskLine(sub: TodoSubTask): string {
+  const checkbox = sub.completed ? 'x' : ' ';
+  const ddl = sub.deadline ? `[ddl:${sub.deadline}] ` : '';
+  const done = sub.completed && sub.completedDate ? `[done:${sub.completedDate}] ` : '';
+  const text = sub.completed ? `~~${sub.text}~~` : sub.text;
+  return `  - [${checkbox}] ${ddl}${done}${text}`;
 }
 
 function compareVisibleActiveTodos(left: TodoItem, right: TodoItem, todayKey: string): number {

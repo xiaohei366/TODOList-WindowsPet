@@ -1,6 +1,6 @@
 import { Check, Circle, Pencil, Plus, Power, Trash2, X } from 'lucide-react';
-import { FormEvent, PointerEvent, ReactElement, type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
-import type { PetPackage, PetState, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
+import React, { FormEvent, PointerEvent, ReactElement, type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import type { PetPackage, PetState, ScheduledTodoInput, ScheduledTodoRule, SubTaskMenuAction, TodoItem, TodoMenuAction, TodoSubTask } from '../../shared/types';
 import { type AppLanguage, type I18nKey, defaultLanguage, t } from '../../shared/i18n';
 import { getAnimationSpec, getInteractivePetState, getPetSpriteStyle, getTodoDrivenPetState } from './petAnimation';
 import { clampPetUiScale, defaultPetUiScale, getPetUiScaleFromResizeDrag } from './petScale';
@@ -38,6 +38,10 @@ export function App(): ReactElement {
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
   const [editingNotesTodo, setEditingNotesTodo] = useState<{ id: string; notes: string } | null>(null);
   const [deadlineFormTodo, setDeadlineFormTodo] = useState<{ id: string; year: string; month: string; day: string } | null>(null);
+  const [subTaskComposerParent, setSubTaskComposerParent] = useState<string | null>(null);
+  const [newSubTaskText, setNewSubTaskText] = useState('');
+  const [editingSubTask, setEditingSubTask] = useState<{ parentId: string; subTaskId: string; text: string } | null>(null);
+  const [subTaskDeadlineForm, setSubTaskDeadlineForm] = useState<{ parentId: string; subTaskId: string; year: string; month: string; day: string } | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createDefaultScheduleForm());
@@ -137,8 +141,10 @@ export function App(): ReactElement {
 
   useEffect(() => {
     const offTodoAction = window.todoPet.ui.onTodoAction(handleTodoMenuAction);
+    const offSubTaskAction = window.todoPet.ui.onSubTaskAction(handleSubTaskMenuAction);
     return () => {
       offTodoAction();
+      offSubTaskAction();
     };
   }, [todos]);
 
@@ -389,6 +395,12 @@ export function App(): ReactElement {
       });
       return;
     }
+    if (action.type === 'add-sub-task') {
+      setComposerOpen(false);
+      setSubTaskComposerParent(item.id);
+      setNewSubTaskText('');
+      return;
+    }
     if (action.type === 'toggle-completed') {
       void window.todoPet.todos.setCompleted(item.id, !item.completed);
       return;
@@ -466,6 +478,87 @@ export function App(): ReactElement {
       return { label: tr('todo.dueToday'), className: 'todo-deadline--due-today' };
     }
     return { label: tr('todo.daysLeft', { count: diffDays }), className: '' };
+  }
+
+  function handleSubTaskMenuAction(action: SubTaskMenuAction): void {
+    if (action.type === 'edit') {
+      const parent = todos.find((item) => item.id === action.parentId);
+      const sub = parent?.subTasks.find((s) => s.id === action.subTaskId);
+      if (!sub) return;
+      setEditingSubTask({ parentId: action.parentId, subTaskId: sub.id, text: sub.text });
+      return;
+    }
+    if (action.type === 'toggle-completed') {
+      const parent = todos.find((item) => item.id === action.parentId);
+      const sub = parent?.subTasks.find((s) => s.id === action.subTaskId);
+      if (!sub) return;
+      void window.todoPet.todos.setSubTaskCompleted(action.parentId, action.subTaskId, !sub.completed);
+      return;
+    }
+    if (action.type === 'set-deadline') {
+      const parent = todos.find((item) => item.id === action.parentId);
+      const sub = parent?.subTasks.find((s) => s.id === action.subTaskId);
+      if (!sub) return;
+      const today = new Date();
+      const parts = sub.deadline?.split('-') ?? [];
+      setSubTaskDeadlineForm({
+        parentId: action.parentId,
+        subTaskId: action.subTaskId,
+        year: parts[0] ?? String(today.getFullYear()),
+        month: parts[1] ?? String(today.getMonth() + 1).padStart(2, '0'),
+        day: parts[2] ?? String(today.getDate()).padStart(2, '0')
+      });
+      return;
+    }
+    if (action.type === 'delete') {
+      void window.todoPet.todos.deleteSubTask(action.parentId, action.subTaskId);
+      return;
+    }
+    if (action.type === 'move-up' || action.type === 'move-down') {
+      void window.todoPet.todos.moveSubTask(action.parentId, action.subTaskId, action.type === 'move-up' ? 'up' : 'down');
+    }
+  }
+
+  async function submitSubTask(event: FormEvent, parentId: string): Promise<void> {
+    event.preventDefault();
+    const text = newSubTaskText.trim();
+    if (!text) return;
+    await window.todoPet.todos.addSubTask(parentId, text);
+    setNewSubTaskText('');
+  }
+
+  async function submitSubTaskEdit(event: FormEvent, parentId: string): Promise<void> {
+    event.preventDefault();
+    const text = editingSubTask?.text.trim() ?? '';
+    if (!text) return;
+    await window.todoPet.todos.updateSubTask(parentId, editingSubTask!.subTaskId, text);
+    setEditingSubTask(null);
+  }
+
+  async function submitSubTaskDeadlineForm(event: FormEvent, parentId: string): Promise<void> {
+    event.preventDefault();
+    const form = subTaskDeadlineForm;
+    if (!form) return;
+    const year = form.year.trim();
+    const month = form.month.trim();
+    const day = form.day.trim();
+    if (year && month && day) {
+      const deadline = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      await window.todoPet.todos.setSubTaskDeadline(parentId, form.subTaskId, deadline);
+    } else {
+      await window.todoPet.todos.setSubTaskDeadline(parentId, form.subTaskId, undefined);
+    }
+    setSubTaskDeadlineForm(null);
+  }
+
+  function openSubTaskMenu(event: React.MouseEvent, parentId: string, sub: TodoSubTask): void {
+    event.preventDefault();
+    event.stopPropagation();
+    void window.todoPet.ui.showSubTaskMenu({
+      point: { x: Math.round(event.clientX), y: Math.round(event.clientY) },
+      parentId,
+      subTask: sub
+    });
   }
 
   function handleTodoPointerMove(event: PointerEvent<HTMLElement>, item: TodoItem): void {
@@ -794,6 +887,7 @@ export function App(): ReactElement {
               <div className="empty-state">{tr('todo.empty')}</div>
             ) : (
             todos.map((item) => (
+              <React.Fragment key={item.id}>
               <article
                 className={[
                   'todo-item',
@@ -804,7 +898,6 @@ export function App(): ReactElement {
                   draggingTodo?.id === item.id ? 'todo-item--dragging' : ''
                 ].join(' ')}
                   data-todo-id={item.id}
-                  key={item.id}
                   onContextMenu={(event) => openTaskMenu(event, item)}
                   onPointerDown={(event) => startTodoPress(event, item)}
                   onPointerMove={(event) => handleTodoPointerMove(event, item)}
@@ -835,7 +928,10 @@ export function App(): ReactElement {
                       <button
                         className="todo-check"
                         title={item.completed ? tr('todo.markActive') : tr('todo.markDone')}
-                        onClick={() => void window.todoPet.todos.setCompleted(item.id, !item.completed)}
+                        onClick={() => {
+                          if (!item.completed && item.subTasks.some((s) => !s.completed)) return;
+                          void window.todoPet.todos.setCompleted(item.id, !item.completed);
+                        }}
                       >
                         {item.completed ? <Check size={15} /> : <Circle size={15} />}
                       </button>
@@ -917,6 +1013,121 @@ export function App(): ReactElement {
                     </>
                   )}
                 </article>
+                {item.subTasks.map((sub) => (
+                  <article
+                    className={['todo-item', 'todo-sub-task', sub.completed ? 'todo-item--done' : ''].join(' ')}
+                    key={sub.id}
+                    onContextMenu={(event) => openSubTaskMenu(event, item.id, sub)}
+                  >
+                    {editingSubTask?.subTaskId === sub.id ? (
+                      <form className="todo-editor" onSubmit={(event) => void submitSubTaskEdit(event, item.id)}>
+                        <input
+                          autoFocus
+                          value={editingSubTask.text}
+                          onChange={(event) => setEditingSubTask({ ...editingSubTask!, text: event.target.value })}
+                        />
+                        <button className="icon-button" title={tr('todo.saveEdit')} type="submit">
+                          <Check size={14} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          title={tr('menu.cancelEdit')}
+                          type="button"
+                          onClick={() => setEditingSubTask(null)}
+                        >
+                          <X size={14} />
+                        </button>
+                      </form>
+                    ) : subTaskDeadlineForm?.subTaskId === sub.id ? (
+                      <>
+                        <button
+                          className="todo-check"
+                          onClick={() => void window.todoPet.todos.setSubTaskCompleted(item.id, sub.id, !sub.completed)}
+                        >
+                          {sub.completed ? <Check size={13} /> : <Circle size={13} />}
+                        </button>
+                        <div className="todo-copy">
+                          <span>{sub.text}</span>
+                          <form className="todo-deadline-editor" style={{ gridColumn: '1 / -1' }} onSubmit={(event) => void submitSubTaskDeadlineForm(event, item.id)}>
+                            <div className="todo-deadline-inputs">
+                              <input
+                                autoFocus
+                                className="todo-deadline-year"
+                                value={subTaskDeadlineForm.year}
+                                onChange={(event) => setSubTaskDeadlineForm({ ...subTaskDeadlineForm!, year: event.target.value })}
+                                placeholder={tr('schedule.year')}
+                              />
+                              <input
+                                className="todo-deadline-month"
+                                value={subTaskDeadlineForm.month}
+                                onChange={(event) => setSubTaskDeadlineForm({ ...subTaskDeadlineForm!, month: event.target.value })}
+                                placeholder={tr('schedule.month')}
+                              />
+                              <input
+                                className="todo-deadline-day"
+                                value={subTaskDeadlineForm.day}
+                                onChange={(event) => setSubTaskDeadlineForm({ ...subTaskDeadlineForm!, day: event.target.value })}
+                                placeholder={tr('schedule.day')}
+                              />
+                            </div>
+                            <div className="todo-deadline-editor-actions">
+                              <button className="icon-button" title={tr('todo.save')} type="submit">
+                                <Check size={14} />
+                              </button>
+                              <button
+                                className="icon-button"
+                                title={tr('menu.cancelEdit')}
+                                type="button"
+                                onClick={() => setSubTaskDeadlineForm(null)}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="todo-check"
+                          onClick={() => void window.todoPet.todos.setSubTaskCompleted(item.id, sub.id, !sub.completed)}
+                        >
+                          {sub.completed ? <Check size={13} /> : <Circle size={13} />}
+                        </button>
+                        <div className="todo-copy">
+                          <span>{sub.text}</span>
+                          <div className="todo-copy-meta">
+                            {sub.deadline && !sub.completed ? (
+                              <small className={getDeadlineInfo(sub.deadline).className}>{getDeadlineInfo(sub.deadline).label}</small>
+                            ) : null}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </article>
+                ))}
+                {subTaskComposerParent === item.id ? (
+                  <form className="todo-sub-task-composer" onSubmit={(event) => void submitSubTask(event, item.id)}>
+                    <input
+                      autoFocus
+                      value={newSubTaskText}
+                      onChange={(event) => setNewSubTaskText(event.target.value)}
+                      placeholder={tr('todo.subTaskPlaceholder')}
+                    />
+                    <button className="icon-button" title={tr('todo.save')} type="submit">
+                      <Check size={14} />
+                    </button>
+                    <button
+                      className="icon-button"
+                      title={tr('todo.cancel')}
+                      type="button"
+                      onClick={() => setSubTaskComposerParent(null)}
+                    >
+                      <X size={14} />
+                    </button>
+                  </form>
+                ) : null}
+              </React.Fragment>
               ))
             )}
           </div>

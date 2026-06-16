@@ -513,6 +513,59 @@ button {
   justify-content: flex-end;
 }
 
+.todo-sub-task {
+  margin-left: 28px;
+  min-height: 34px;
+  padding: 3px 8px 3px 5px;
+}
+
+.todo-sub-task .todo-check {
+  width: 22px;
+  height: 22px;
+}
+
+.todo-sub-task .todo-copy span {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.todo-sub-task .todo-copy small {
+  font-size: 10px;
+}
+
+.todo-sub-task-composer {
+  margin-left: 28px;
+  display: grid;
+  grid-template-columns: 1fr 24px 24px;
+  gap: 4px;
+  align-items: center;
+  min-height: 32px;
+  padding: 3px 8px 3px 5px;
+  border: 1px solid rgba(40, 122, 97, 0.24);
+  border-radius: 7px;
+  background: rgba(40, 122, 97, 0.04);
+}
+
+.todo-sub-task-composer input {
+  min-width: 0;
+  height: 24px;
+  border: none;
+  outline: 0;
+  padding: 0 4px;
+  color: #17201d;
+  background: transparent;
+  font-size: 12px;
+}
+
+.todo-sub-task .todo-editor {
+  gap: 3px;
+}
+
+.todo-sub-task .todo-editor input {
+  height: 24px;
+  font-size: 12px;
+}
+
 .pet-anchor {
   position: absolute;
   left: 50%;

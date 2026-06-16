@@ -1,4 +1,4 @@
-import type { PetPackage, ScheduledTodoInput, ScheduledTodoRule, TodoItem, TodoMenuAction } from '../../shared/types';
+import type { PetPackage, ScheduledTodoInput, ScheduledTodoRule, SubTaskMenuAction, TodoItem, TodoMenuAction, TodoSubTask } from '../../shared/types';
 import type { AppLanguage } from '../../shared/i18n';
 
 declare global {
@@ -13,6 +13,12 @@ declare global {
         updateText: (id: string, text: string) => Promise<TodoItem>;
         updateNotes: (id: string, notes: string) => Promise<TodoItem>;
         setDeadline: (id: string, deadline: string | undefined) => Promise<TodoItem>;
+        addSubTask: (parentId: string, text: string) => Promise<TodoItem>;
+        updateSubTask: (parentId: string, subTaskId: string, text: string) => Promise<TodoItem>;
+        setSubTaskCompleted: (parentId: string, subTaskId: string, completed: boolean) => Promise<TodoItem>;
+        setSubTaskDeadline: (parentId: string, subTaskId: string, deadline: string | undefined) => Promise<TodoItem>;
+        deleteSubTask: (parentId: string, subTaskId: string) => Promise<TodoItem>;
+        moveSubTask: (parentId: string, subTaskId: string, direction: 'up' | 'down') => Promise<TodoItem>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
         reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
         openSource: () => Promise<void>;
@@ -41,10 +47,12 @@ declare global {
       ui: {
         showPetMenu: (point: { x: number; y: number }) => Promise<void>;
         showTodoMenu: (payload: { point: { x: number; y: number }; item: TodoItem }) => Promise<void>;
+        showSubTaskMenu: (payload: { point: { x: number; y: number }; parentId: string; subTask: TodoSubTask }) => Promise<void>;
         onToggleTodoPanel: (listener: () => void) => () => void;
         onToggleSchedulePanel: (listener: () => void) => () => void;
         onSelectPet: (listener: (id: string) => void) => () => void;
         onTodoAction: (listener: (action: TodoMenuAction) => void) => () => void;
+        onSubTaskAction: (listener: (action: SubTaskMenuAction) => void) => () => void;
       };
       window: {
         moveBy: (deltaX: number, deltaY: number) => Promise<void>;

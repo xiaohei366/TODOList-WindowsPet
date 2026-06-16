@@ -47,7 +47,8 @@ describe('petAnimation helpers', () => {
         overdue: true,
         sourceLine: 4,
         notes: '',
-        deadline: undefined
+        deadline: undefined,
+        subTasks: []
       }
     ];
 
@@ -65,7 +66,8 @@ describe('petAnimation helpers', () => {
         overdue: false,
         sourceLine: 4,
         notes: '',
-        deadline: undefined
+        deadline: undefined,
+        subTasks: []
       }
     ];
 

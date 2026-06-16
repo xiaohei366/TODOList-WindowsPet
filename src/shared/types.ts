@@ -1,3 +1,12 @@
+export type TodoSubTask = {
+  id: string;
+  text: string;
+  completed: boolean;
+  completedDate?: string;
+  deadline?: string;
+  displayOrder?: number;
+};
+
 export type TodoItem = {
   id: string;
   date: string;
@@ -10,12 +19,14 @@ export type TodoItem = {
   sourceLine: number;
   notes: string;
   deadline?: string;
+  subTasks: TodoSubTask[];
 };
 
 export type TodoMenuActionType =
   | 'edit'
   | 'edit-notes'
   | 'set-deadline'
+  | 'add-sub-task'
   | 'toggle-completed'
   | 'toggle-highlighted'
   | 'delete'
@@ -25,6 +36,20 @@ export type TodoMenuActionType =
 export type TodoMenuAction = {
   type: TodoMenuActionType;
   id: string;
+};
+
+export type SubTaskMenuActionType =
+  | 'edit'
+  | 'toggle-completed'
+  | 'set-deadline'
+  | 'delete'
+  | 'move-up'
+  | 'move-down';
+
+export type SubTaskMenuAction = {
+  type: SubTaskMenuActionType;
+  parentId: string;
+  subTaskId: string;
 };
 
 export type PetSource = 'app' | 'codex' | 'npm';

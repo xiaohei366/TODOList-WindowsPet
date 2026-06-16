@@ -13,7 +13,8 @@ function item(id: string, date: string, completed: boolean, completedDate?: stri
     overdue: false,
     sourceLine: 1,
     notes: '',
-    deadline: undefined
+    deadline: undefined,
+    subTasks: []
   };
 }
 
