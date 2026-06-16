@@ -19,6 +19,7 @@ declare global {
         setSubTaskDeadline: (parentId: string, subTaskId: string, deadline: string | undefined) => Promise<TodoItem>;
         deleteSubTask: (parentId: string, subTaskId: string) => Promise<TodoItem>;
         moveSubTask: (parentId: string, subTaskId: string, direction: 'up' | 'down') => Promise<TodoItem>;
+        reorderSubTasks: (parentId: string, ids: string[]) => Promise<TodoItem[]>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
         reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
         openSource: () => Promise<void>;

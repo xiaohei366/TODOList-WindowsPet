@@ -1,4 +1,4 @@
-import { Check, Circle, Pencil, Plus, Power, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Circle, Pencil, Plus, Power, Trash2, X } from 'lucide-react';
 import React, { FormEvent, PointerEvent, ReactElement, type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import type { PetPackage, PetState, ScheduledTodoInput, ScheduledTodoRule, SubTaskMenuAction, TodoItem, TodoMenuAction, TodoSubTask } from '../../shared/types';
 import { type AppLanguage, type I18nKey, defaultLanguage, t } from '../../shared/i18n';
@@ -35,13 +35,21 @@ export function App(): ReactElement {
   const [composerOpen, setComposerOpen] = useState(false);
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
-  const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
+  const [editingTodo, setEditingTodo] = useState<{ id: string; text: string; parentId?: string } | null>(null);
   const [editingNotesTodo, setEditingNotesTodo] = useState<{ id: string; notes: string } | null>(null);
   const [deadlineFormTodo, setDeadlineFormTodo] = useState<{ id: string; year: string; month: string; day: string } | null>(null);
   const [subTaskComposerParent, setSubTaskComposerParent] = useState<string | null>(null);
   const [newSubTaskText, setNewSubTaskText] = useState('');
-  const [editingSubTask, setEditingSubTask] = useState<{ parentId: string; subTaskId: string; text: string } | null>(null);
   const [subTaskDeadlineForm, setSubTaskDeadlineForm] = useState<{ parentId: string; subTaskId: string; year: string; month: string; day: string } | null>(null);
+  const [draggingSubTask, setDraggingSubTask] = useState<{ parentId: string; subTaskId: string } | null>(null);
+  const [collapsedParents, setCollapsedParents] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('tolist:collapsed-subtasks');
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createDefaultScheduleForm());
@@ -192,6 +200,24 @@ export function App(): ReactElement {
     window.addEventListener('pointerup', stopDragging, { once: true });
     return () => window.removeEventListener('pointerup', stopDragging);
   }, [draggingTodo, todos]);
+
+  useEffect(() => {
+    if (!draggingSubTask) {
+      return;
+    }
+    const stopDragging = (event: globalThis.PointerEvent): void => {
+      const parent = todos.find((item) => item.id === draggingSubTask.parentId);
+      if (parent) {
+        const activeIds = parent.subTasks.filter((s) => !s.completed).map((s) => s.id);
+        void window.todoPet.todos.reorderSubTasks(draggingSubTask.parentId, activeIds).then(setTodos);
+      }
+      setDraggingSubTask(null);
+      setWindowMouseInputCaptured(false);
+      updateWindowMousePassthroughFromPoint(event.clientX, event.clientY);
+    };
+    window.addEventListener('pointerup', stopDragging, { once: true });
+    return () => window.removeEventListener('pointerup', stopDragging);
+  }, [draggingSubTask, todos]);
 
   useEffect(() => {
     if (!resizingPetUi) {
@@ -419,7 +445,7 @@ export function App(): ReactElement {
   }
 
   function startTodoPress(event: PointerEvent, item: TodoItem): void {
-    if (editingTodo?.id === item.id || editingNotesTodo?.id === item.id || deadlineFormTodo?.id === item.id || item.completed || event.button !== 0) {
+    if (editingTodo?.id === item.id || editingTodo?.parentId === item.id || editingNotesTodo?.id === item.id || deadlineFormTodo?.id === item.id || item.completed || event.button !== 0) {
       return;
     }
     todoPressStart.current = { x: event.clientX, y: event.clientY };
@@ -441,7 +467,11 @@ export function App(): ReactElement {
     if (!text) {
       return;
     }
-    await window.todoPet.todos.updateText(item.id, text);
+    if (editingTodo?.parentId) {
+      await window.todoPet.todos.updateSubTask(editingTodo.parentId, editingTodo.id, text);
+    } else {
+      await window.todoPet.todos.updateText(item.id, text);
+    }
     setEditingTodo(null);
   }
 
@@ -485,7 +515,7 @@ export function App(): ReactElement {
       const parent = todos.find((item) => item.id === action.parentId);
       const sub = parent?.subTasks.find((s) => s.id === action.subTaskId);
       if (!sub) return;
-      setEditingSubTask({ parentId: action.parentId, subTaskId: sub.id, text: sub.text });
+      setEditingTodo({ id: sub.id, text: sub.text, parentId: action.parentId });
       return;
     }
     if (action.type === 'toggle-completed') {
@@ -527,14 +557,6 @@ export function App(): ReactElement {
     setNewSubTaskText('');
   }
 
-  async function submitSubTaskEdit(event: FormEvent, parentId: string): Promise<void> {
-    event.preventDefault();
-    const text = editingSubTask?.text.trim() ?? '';
-    if (!text) return;
-    await window.todoPet.todos.updateSubTask(parentId, editingSubTask!.subTaskId, text);
-    setEditingSubTask(null);
-  }
-
   async function submitSubTaskDeadlineForm(event: FormEvent, parentId: string): Promise<void> {
     event.preventDefault();
     const form = subTaskDeadlineForm;
@@ -558,6 +580,69 @@ export function App(): ReactElement {
       point: { x: Math.round(event.clientX), y: Math.round(event.clientY) },
       parentId,
       subTask: sub
+    });
+  }
+
+  function toggleCollapse(parentId: string): void {
+    setCollapsedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) {
+        next.delete(parentId);
+      } else {
+        next.add(parentId);
+      }
+      localStorage.setItem('tolist:collapsed-subtasks', JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  function startSubTaskPress(event: PointerEvent, parentId: string, sub: TodoSubTask): void {
+    if (sub.completed || event.button !== 0) return;
+    todoPressStart.current = { x: event.clientX, y: event.clientY };
+    window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      setWindowMouseInputCaptured(true);
+      setDraggingSubTask({ parentId, subTaskId: sub.id });
+    }, 220);
+  }
+
+  function cancelSubTaskPress(): void {
+    window.clearTimeout(longPressTimer.current);
+    todoPressStart.current = null;
+  }
+
+  function handleSubTaskPointerMove(event: PointerEvent<HTMLElement>, parentId: string, sub: TodoSubTask): void {
+    if (!draggingSubTask && todoPressStart.current) {
+      const deltaX = event.clientX - todoPressStart.current.x;
+      const deltaY = event.clientY - todoPressStart.current.y;
+      if (Math.hypot(deltaX, deltaY) > 10) {
+        cancelSubTaskPress();
+      }
+      return;
+    }
+    if (!draggingSubTask || draggingSubTask.parentId !== parentId || sub.id === draggingSubTask.subTaskId) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const placement: 'before' | 'after' = event.clientY > bounds.top + bounds.height / 2 ? 'after' : 'before';
+    hoverSubTask(parentId, draggingSubTask.subTaskId, sub.id, placement);
+  }
+
+  function hoverSubTask(parentId: string, draggingId: string, targetId: string, placement: 'before' | 'after'): void {
+    if (!draggingSubTask) return;
+    setTodos((current) => reorderSubTasksLocally(current, parentId, draggingId, targetId, placement));
+  }
+
+  function reorderSubTasksLocally(todosList: TodoItem[], parentId: string, draggingSubTaskId: string, hoverSubTaskId: string, placement: 'before' | 'after'): TodoItem[] {
+    return todosList.map((item) => {
+      if (item.id !== parentId) return item;
+      const subTasks = [...item.subTasks];
+      const fromIdx = subTasks.findIndex((s) => s.id === draggingSubTaskId);
+      if (fromIdx < 0) return item;
+      const [removed] = subTasks.splice(fromIdx, 1);
+      let toIdx = subTasks.findIndex((s) => s.id === hoverSubTaskId);
+      if (toIdx < 0) return item;
+      if (placement === 'after') toIdx += 1;
+      subTasks.splice(toIdx, 0, removed);
+      return { ...item, subTasks };
     });
   }
 
@@ -904,7 +989,7 @@ export function App(): ReactElement {
                 onPointerUp={cancelTodoPress}
                 onPointerCancel={cancelTodoPress}
               >
-                  {editingTodo?.id === item.id ? (
+                  {editingTodo?.id === item.id && !editingTodo.parentId ? (
                     <form className="todo-editor" onSubmit={(event) => void submitTodoEdit(event, item)}>
                       <input
                         autoFocus
@@ -936,7 +1021,19 @@ export function App(): ReactElement {
                         {item.completed ? <Check size={15} /> : <Circle size={15} />}
                       </button>
                       <div className="todo-copy">
-                        <span>{item.text}</span>
+                        <span>
+                          {item.subTasks.length > 0 ? (
+                            <button
+                              className="todo-collapse-toggle"
+                              title={collapsedParents.has(item.id) ? tr('todo.expandSubTasks') : tr('todo.collapseSubTasks')}
+                              type="button"
+                              onClick={(event) => { event.stopPropagation(); toggleCollapse(item.id); }}
+                            >
+                              {collapsedParents.has(item.id) ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                          ) : null}
+                          {item.text}
+                        </span>
                         <div className="todo-copy-meta">
                           {item.deadline && !item.completed ? (
                             <small className={getDeadlineInfo(item.deadline).className}>{getDeadlineInfo(item.deadline).label}</small>
@@ -945,6 +1042,9 @@ export function App(): ReactElement {
                           )}
                           {item.notes && editingNotesTodo?.id !== item.id ? (
                             <small className="todo-notes-preview">{item.notes}</small>
+                          ) : null}
+                          {item.subTasks.length > 0 && collapsedParents.has(item.id) ? (
+                            <small className="todo-subtask-count">{item.subTasks.filter((s) => s.completed).length}/{item.subTasks.length}</small>
                           ) : null}
                         </div>
                       </div>
@@ -972,6 +1072,16 @@ export function App(): ReactElement {
                             />
                           </div>
                           <div className="todo-deadline-editor-actions">
+                            {item.deadline ? (
+                              <button
+                                className="icon-button icon-button--danger"
+                                title={tr('menu.removeDeadline')}
+                                type="button"
+                                onClick={() => { void window.todoPet.todos.setDeadline(item.id, undefined); setDeadlineFormTodo(null); }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            ) : null}
                             <button className="icon-button" title={tr('todo.save')} type="submit">
                               <Check size={16} />
                             </button>
@@ -1013,18 +1123,27 @@ export function App(): ReactElement {
                     </>
                   )}
                 </article>
-                {item.subTasks.map((sub) => (
+                {!collapsedParents.has(item.id) ? item.subTasks.map((sub) => (
                   <article
-                    className={['todo-item', 'todo-sub-task', sub.completed ? 'todo-item--done' : ''].join(' ')}
+                    className={[
+                      'todo-item',
+                      'todo-sub-task',
+                      sub.completed ? 'todo-item--done' : '',
+                      draggingSubTask?.subTaskId === sub.id ? 'todo-sub-task--dragging' : ''
+                    ].join(' ')}
                     key={sub.id}
                     onContextMenu={(event) => openSubTaskMenu(event, item.id, sub)}
+                    onPointerDown={(event) => startSubTaskPress(event, item.id, sub)}
+                    onPointerMove={(event) => handleSubTaskPointerMove(event, item.id, sub)}
+                    onPointerUp={cancelSubTaskPress}
+                    onPointerCancel={cancelSubTaskPress}
                   >
-                    {editingSubTask?.subTaskId === sub.id ? (
-                      <form className="todo-editor" onSubmit={(event) => void submitSubTaskEdit(event, item.id)}>
+                    {editingTodo?.id === sub.id && editingTodo?.parentId === item.id ? (
+                      <form className="todo-editor" onSubmit={(event) => void submitTodoEdit(event, item)}>
                         <input
                           autoFocus
-                          value={editingSubTask.text}
-                          onChange={(event) => setEditingSubTask({ ...editingSubTask!, text: event.target.value })}
+                          value={editingTodo.text}
+                          onChange={(event) => setEditingTodo({ id: sub.id, text: event.target.value, parentId: item.id })}
                         />
                         <button className="icon-button" title={tr('todo.saveEdit')} type="submit">
                           <Check size={14} />
@@ -1033,7 +1152,7 @@ export function App(): ReactElement {
                           className="icon-button"
                           title={tr('menu.cancelEdit')}
                           type="button"
-                          onClick={() => setEditingSubTask(null)}
+                          onClick={() => setEditingTodo(null)}
                         >
                           <X size={14} />
                         </button>
@@ -1071,6 +1190,16 @@ export function App(): ReactElement {
                               />
                             </div>
                             <div className="todo-deadline-editor-actions">
+                              {sub.deadline ? (
+                                <button
+                                  className="icon-button icon-button--danger"
+                                  title={tr('menu.removeDeadline')}
+                                  type="button"
+                                  onClick={() => { void window.todoPet.todos.setSubTaskDeadline(item.id, sub.id, undefined); setSubTaskDeadlineForm(null); }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              ) : null}
                               <button className="icon-button" title={tr('todo.save')} type="submit">
                                 <Check size={14} />
                               </button>
@@ -1105,8 +1234,8 @@ export function App(): ReactElement {
                       </>
                     )}
                   </article>
-                ))}
-                {subTaskComposerParent === item.id ? (
+                )) : null}
+                {!collapsedParents.has(item.id) && subTaskComposerParent === item.id ? (
                   <form className="todo-sub-task-composer" onSubmit={(event) => void submitSubTask(event, item.id)}>
                     <input
                       autoFocus

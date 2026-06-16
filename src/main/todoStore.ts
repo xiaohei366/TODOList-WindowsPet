@@ -404,19 +404,36 @@ export class TodoMarkdownStore {
       return this.findUpdated(target);
     }
 
-    // Swap displayOrder between the two
-    const orderA = active[idx].displayOrder;
-    const orderB = active[swapIdx].displayOrder;
-    const subTasks = target.subTasks.map((sub) => {
-      if (sub.id === active[idx].id) return { ...sub, displayOrder: orderB };
-      if (sub.id === active[swapIdx].id) return { ...sub, displayOrder: orderA };
-      return sub;
-    });
+    // Find actual indices in the full subTasks array and swap positions
+    const actualIdx = target.subTasks.findIndex((sub) => sub.id === active[idx].id);
+    const actualSwapIdx = target.subTasks.findIndex((sub) => sub.id === active[swapIdx].id);
+    const subTasks = [...target.subTasks];
+    [subTasks[actualIdx], subTasks[actualSwapIdx]] = [subTasks[actualSwapIdx], subTasks[actualIdx]];
 
     const updated = { ...target, subTasks };
     const next = items.map((item) => (item.id === parentId ? updated : item));
     await this.writeItems(next);
     return this.findUpdated(updated);
+  }
+
+  async reorderSubTasks(parentId: string, ids: string[]): Promise<TodoItem[]> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === parentId);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const active = target.subTasks.filter((sub) => !sub.completed);
+    const completed = target.subTasks.filter((sub) => sub.completed);
+    const byId = new Map(active.map((sub) => [sub.id, sub]));
+    const reorderedActive = ids.map((id) => byId.get(id)).filter((sub): sub is TodoSubTask => Boolean(sub));
+    const missingActive = active.filter((sub) => !ids.includes(sub.id));
+    const nextSubTasks = [...reorderedActive, ...missingActive, ...completed];
+
+    const updated = { ...target, subTasks: nextSubTasks };
+    const next = items.map((item) => (item.id === parentId ? updated : item));
+    await this.writeItems(next);
+    return this.list();
   }
 
   async importMarkdown(importPath: string): Promise<ImportResult> {

@@ -610,6 +610,11 @@ function registerIpc(): void {
     await sendTodosChanged();
     return item;
   });
+  ipcMain.handle('todos:reorderSubTasks', async (_event, parentId: string, ids: string[]) => {
+    const items = await todoStore.reorderSubTasks(parentId, ids);
+    await sendTodosChanged();
+    return items;
+  });
   ipcMain.handle('ui:showSubTaskMenu', async (_event, payload: { point: { x: number; y: number }; parentId: string; subTask: TodoSubTask }) => {
     showSubTaskMenu(payload);
   });

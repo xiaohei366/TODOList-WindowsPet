@@ -519,6 +519,44 @@ button {
   padding: 3px 8px 3px 5px;
 }
 
+.todo-sub-task--dragging {
+  opacity: 0.72;
+  outline: 2px solid rgba(40, 122, 97, 0.35);
+}
+
+.todo-collapse-toggle {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 0;
+  border-radius: 3px;
+  color: #75827d;
+  background: transparent;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-right: 2px;
+  padding: 0;
+}
+
+.todo-collapse-toggle:hover {
+  background: rgba(71, 107, 92, 0.12);
+}
+
+.todo-subtask-count {
+  color: #75827d;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.icon-button--danger {
+  color: #bf3b30;
+}
+
+.icon-button--danger:hover {
+  background: rgba(191, 59, 48, 0.12);
+}
+
 .todo-sub-task .todo-check {
   width: 22px;
   height: 22px;
