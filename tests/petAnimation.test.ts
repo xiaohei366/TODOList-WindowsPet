@@ -45,7 +45,8 @@ describe('petAnimation helpers', () => {
         completed: false,
         highlighted: false,
         overdue: true,
-        sourceLine: 4
+        sourceLine: 4,
+        notes: ''
       }
     ];
 
@@ -61,7 +62,8 @@ describe('petAnimation helpers', () => {
         completed: true,
         highlighted: false,
         overdue: false,
-        sourceLine: 4
+        sourceLine: 4,
+        notes: ''
       }
     ];
 

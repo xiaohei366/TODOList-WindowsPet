@@ -8,10 +8,12 @@ export type TodoItem = {
   overdue: boolean;
   displayOrder?: number;
   sourceLine: number;
+  notes: string;
 };
 
 export type TodoMenuActionType =
   | 'edit'
+  | 'edit-notes'
   | 'toggle-completed'
   | 'toggle-highlighted'
   | 'delete'

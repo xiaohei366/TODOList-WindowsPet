@@ -11,7 +11,8 @@ function item(id: string, date: string, completed: boolean, completedDate?: stri
     completedDate,
     highlighted: false,
     overdue: false,
-    sourceLine: 1
+    sourceLine: 1,
+    notes: ''
   };
 }
 

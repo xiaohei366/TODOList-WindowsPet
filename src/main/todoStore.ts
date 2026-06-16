@@ -32,26 +32,45 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
   const items: ParsedTodo[] = [];
   let currentDate: string | undefined;
 
-  lines.forEach((line, index) => {
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index];
     const heading = /^###\s+(\d{4}-\d{2}-\d{2})(?:\s+.*)?$/.exec(line.trim());
     if (heading) {
       currentDate = heading[1];
-      return;
+      index += 1;
+      continue;
     }
 
     if (!currentDate) {
-      return;
+      index += 1;
+      continue;
     }
 
     const todo = /^\s*-\s+\[([ xX])\]\s+(.*)$/.exec(line);
     if (!todo) {
-      return;
+      index += 1;
+      continue;
     }
 
     const completed = todo[1].toLowerCase() === 'x';
     const parsed = parseTodoBody(todo[2], completed);
     const sourceLine = index + 1;
     const order = items.length;
+
+    // Collect note lines (indented sub-items: "  - note text")
+    const noteLines: string[] = [];
+    let noteIndex = index + 1;
+    while (noteIndex < lines.length) {
+      const noteMatch = /^  - (.+)$/.exec(lines[noteIndex]);
+      if (noteMatch) {
+        noteLines.push(noteMatch[1].trim());
+        noteIndex += 1;
+      } else {
+        break;
+      }
+    }
+
     items.push({
       id: createTodoId(currentDate, sourceLine, parsed.text, completed, parsed.highlighted),
       date: currentDate,
@@ -62,9 +81,12 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
       displayOrder: parsed.displayOrder,
       overdue: !completed && currentDate < todayKey,
       sourceLine,
-      order
+      order,
+      notes: noteLines.join('\n')
     });
-  });
+
+    index = noteIndex;
+  }
 
   return items;
 }
@@ -102,6 +124,11 @@ export function renderTodoMarkdown(items: TodoItem[]): string {
     lines.push(`### ${date} ${weekdayName(date)}`, '');
     for (const item of orderedDayItems) {
       lines.push(formatTodoLine(item));
+      if (item.notes) {
+        for (const note of item.notes.split('\n')) {
+          lines.push(`  - ${note}`);
+        }
+      }
     }
     lines.push('');
   }
@@ -139,7 +166,8 @@ export class TodoMarkdownStore {
       highlighted: false,
       overdue: false,
       sourceLine: 0,
-      order: items.length
+      order: items.length,
+      notes: ''
     });
     await this.writeItems(items);
     const updated = await this.readItems();
@@ -205,6 +233,20 @@ export class TodoMarkdownStore {
     }
 
     const updated = { ...target, text: cleaned };
+    const next = items.map((item) => (item.id === id ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async updateNotes(id: string, notes: string): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === id);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const cleaned = notes.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    const updated = { ...target, notes: cleaned };
     const next = items.map((item) => (item.id === id ? updated : item));
     await this.writeItems(next);
     return this.findUpdated(updated);

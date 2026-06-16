@@ -36,6 +36,7 @@ export function App(): ReactElement {
   const [scheduleFormOpen, setScheduleFormOpen] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
+  const [editingNotesTodo, setEditingNotesTodo] = useState<{ id: string; notes: string } | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createDefaultScheduleForm());
@@ -370,6 +371,11 @@ export function App(): ReactElement {
       setEditingTodo({ id: item.id, text: item.text });
       return;
     }
+    if (action.type === 'edit-notes') {
+      setComposerOpen(false);
+      setEditingNotesTodo({ id: item.id, notes: item.notes ?? '' });
+      return;
+    }
     if (action.type === 'toggle-completed') {
       void window.todoPet.todos.setCompleted(item.id, !item.completed);
       return;
@@ -388,7 +394,7 @@ export function App(): ReactElement {
   }
 
   function startTodoPress(event: PointerEvent, item: TodoItem): void {
-    if (editingTodo?.id === item.id || item.completed || event.button !== 0) {
+    if (editingTodo?.id === item.id || editingNotesTodo?.id === item.id || item.completed || event.button !== 0) {
       return;
     }
     todoPressStart.current = { x: event.clientX, y: event.clientY };
@@ -412,6 +418,13 @@ export function App(): ReactElement {
     }
     await window.todoPet.todos.updateText(item.id, text);
     setEditingTodo(null);
+  }
+
+  async function submitNotesEdit(event: FormEvent, item: TodoItem): Promise<void> {
+    event.preventDefault();
+    const notes = editingNotesTodo?.notes ?? '';
+    await window.todoPet.todos.updateNotes(item.id, notes);
+    setEditingNotesTodo(null);
   }
 
   function handleTodoPointerMove(event: PointerEvent<HTMLElement>, item: TodoItem): void {
@@ -746,6 +759,7 @@ export function App(): ReactElement {
                   item.completed ? 'todo-item--done' : '',
                   item.highlighted ? 'todo-item--hot' : '',
                   editingTodo?.id === item.id ? 'todo-item--editing' : '',
+                  editingNotesTodo?.id === item.id ? 'todo-item--editing-notes' : '',
                   draggingTodo?.id === item.id ? 'todo-item--dragging' : ''
                 ].join(' ')}
                   data-todo-id={item.id}
@@ -787,7 +801,34 @@ export function App(): ReactElement {
                       <div className="todo-copy">
                         <span>{item.text}</span>
                         <small>{item.overdue ? item.date : tr('todo.today')}</small>
+                        {item.notes && editingNotesTodo?.id !== item.id ? (
+                          <small className="todo-notes-preview">{item.notes}</small>
+                        ) : null}
                       </div>
+                      {editingNotesTodo?.id === item.id ? (
+                        <form className="todo-notes-editor" onSubmit={(event) => void submitNotesEdit(event, item)}>
+                          <textarea
+                            autoFocus
+                            value={editingNotesTodo.notes}
+                            onChange={(event) => setEditingNotesTodo({ id: item.id, notes: event.target.value })}
+                            placeholder={tr('todo.notesPlaceholder')}
+                            rows={2}
+                          />
+                          <div className="todo-notes-editor-actions">
+                            <button className="icon-button" title={tr('todo.saveNotes')} type="submit">
+                              <Check size={16} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              title={tr('menu.cancelEdit')}
+                              type="button"
+                              onClick={() => setEditingNotesTodo(null)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </form>
+                      ) : null}
                     </>
                   )}
                 </article>

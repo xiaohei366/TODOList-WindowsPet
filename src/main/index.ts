@@ -422,6 +422,11 @@ function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoIte
     },
     { type: 'separator' },
     {
+      label: tr('menu.editNotes'),
+      click: () => sendTodoMenuAction({ type: 'edit-notes', id: item.id })
+    },
+    { type: 'separator' },
+    {
       label: tr('menu.delete'),
       click: () => sendTodoMenuAction({ type: 'delete', id: item.id })
     }
@@ -464,6 +469,11 @@ function registerIpc(): void {
   });
   ipcMain.handle('todos:updateText', async (_event, id: string, text: string) => {
     const item = await todoStore.updateText(id, text);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:updateNotes', async (_event, id: string, notes: string) => {
+    const item = await todoStore.updateNotes(id, notes);
     await sendTodosChanged();
     return item;
   });
