@@ -11,7 +11,8 @@ function item(id: string, text = id, completed = false, date = '2026-05-11'): To
     highlighted: false,
     overdue: false,
     sourceLine: 1,
-    notes: ''
+    notes: '',
+    deadline: undefined
   };
 }
 

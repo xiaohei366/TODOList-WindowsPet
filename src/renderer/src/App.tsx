@@ -37,6 +37,7 @@ export function App(): ReactElement {
   const [newTodoText, setNewTodoText] = useState('');
   const [editingTodo, setEditingTodo] = useState<{ id: string; text: string } | null>(null);
   const [editingNotesTodo, setEditingNotesTodo] = useState<{ id: string; notes: string } | null>(null);
+  const [deadlineFormTodo, setDeadlineFormTodo] = useState<{ id: string; year: string; month: string; day: string } | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(() => createDefaultScheduleForm());
@@ -376,6 +377,18 @@ export function App(): ReactElement {
       setEditingNotesTodo({ id: item.id, notes: item.notes ?? '' });
       return;
     }
+    if (action.type === 'set-deadline') {
+      setComposerOpen(false);
+      const today = new Date();
+      const parts = item.deadline?.split('-') ?? [];
+      setDeadlineFormTodo({
+        id: item.id,
+        year: parts[0] ?? String(today.getFullYear()),
+        month: parts[1] ?? String(today.getMonth() + 1).padStart(2, '0'),
+        day: parts[2] ?? String(today.getDate()).padStart(2, '0')
+      });
+      return;
+    }
     if (action.type === 'toggle-completed') {
       void window.todoPet.todos.setCompleted(item.id, !item.completed);
       return;
@@ -394,7 +407,7 @@ export function App(): ReactElement {
   }
 
   function startTodoPress(event: PointerEvent, item: TodoItem): void {
-    if (editingTodo?.id === item.id || editingNotesTodo?.id === item.id || item.completed || event.button !== 0) {
+    if (editingTodo?.id === item.id || editingNotesTodo?.id === item.id || deadlineFormTodo?.id === item.id || item.completed || event.button !== 0) {
       return;
     }
     todoPressStart.current = { x: event.clientX, y: event.clientY };
@@ -425,6 +438,34 @@ export function App(): ReactElement {
     const notes = editingNotesTodo?.notes ?? '';
     await window.todoPet.todos.updateNotes(item.id, notes);
     setEditingNotesTodo(null);
+  }
+
+  async function submitDeadlineForm(event: FormEvent, item: TodoItem): Promise<void> {
+    event.preventDefault();
+    const form = deadlineFormTodo;
+    if (!form) return;
+    const year = form.year.trim();
+    const month = form.month.trim();
+    const day = form.day.trim();
+    if (year && month && day) {
+      const deadline = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      await window.todoPet.todos.setDeadline(item.id, deadline);
+    } else {
+      await window.todoPet.todos.setDeadline(item.id, undefined);
+    }
+    setDeadlineFormTodo(null);
+  }
+
+  function getDeadlineInfo(deadline: string): { label: string; className: string } {
+    const today = formatLocalDateKey(new Date());
+    const diffDays = Math.ceil((new Date(deadline).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      return { label: tr('todo.overdue'), className: 'todo-deadline--overdue' };
+    }
+    if (diffDays <= 1) {
+      return { label: tr('todo.dueToday'), className: 'todo-deadline--due-today' };
+    }
+    return { label: tr('todo.daysLeft', { count: diffDays }), className: '' };
   }
 
   function handleTodoPointerMove(event: PointerEvent<HTMLElement>, item: TodoItem): void {
@@ -801,12 +842,54 @@ export function App(): ReactElement {
                       <div className="todo-copy">
                         <span>{item.text}</span>
                         <div className="todo-copy-meta">
-                          <small>{item.overdue ? item.date : tr('todo.today')}</small>
+                          {item.deadline && !item.completed ? (
+                            <small className={getDeadlineInfo(item.deadline).className}>{getDeadlineInfo(item.deadline).label}</small>
+                          ) : (
+                            <small>{item.overdue ? item.date : tr('todo.today')}</small>
+                          )}
                           {item.notes && editingNotesTodo?.id !== item.id ? (
                             <small className="todo-notes-preview">{item.notes}</small>
                           ) : null}
                         </div>
                       </div>
+                      {deadlineFormTodo?.id === item.id ? (
+                        <form className="todo-deadline-editor" onSubmit={(event) => void submitDeadlineForm(event, item)}>
+                          <div className="todo-deadline-inputs">
+                            <input
+                              autoFocus
+                              className="todo-deadline-year"
+                              value={deadlineFormTodo.year}
+                              onChange={(event) => setDeadlineFormTodo({ ...deadlineFormTodo, year: event.target.value })}
+                              placeholder={tr('schedule.year')}
+                            />
+                            <input
+                              className="todo-deadline-month"
+                              value={deadlineFormTodo.month}
+                              onChange={(event) => setDeadlineFormTodo({ ...deadlineFormTodo, month: event.target.value })}
+                              placeholder={tr('schedule.month')}
+                            />
+                            <input
+                              className="todo-deadline-day"
+                              value={deadlineFormTodo.day}
+                              onChange={(event) => setDeadlineFormTodo({ ...deadlineFormTodo, day: event.target.value })}
+                              placeholder={tr('schedule.day')}
+                            />
+                          </div>
+                          <div className="todo-deadline-editor-actions">
+                            <button className="icon-button" title={tr('todo.save')} type="submit">
+                              <Check size={16} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              title={tr('menu.cancelEdit')}
+                              type="button"
+                              onClick={() => setDeadlineFormTodo(null)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </form>
+                      ) : null}
                       {editingNotesTodo?.id === item.id ? (
                         <form className="todo-notes-editor" onSubmit={(event) => void submitNotesEdit(event, item)}>
                           <textarea

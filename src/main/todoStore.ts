@@ -82,7 +82,8 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
       overdue: !completed && currentDate < todayKey,
       sourceLine,
       order,
-      notes: noteLines.join('\n')
+      notes: noteLines.join('\n'),
+      deadline: parsed.deadline
     });
 
     index = noteIndex;
@@ -252,6 +253,19 @@ export class TodoMarkdownStore {
     return this.findUpdated(updated);
   }
 
+  async setDeadline(id: string, deadline: string | undefined): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === id);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const updated = { ...target, deadline: deadline || undefined };
+    const next = items.map((item) => (item.id === id ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
   async importMarkdown(importPath: string): Promise<ImportResult> {
     const content = await readFile(importPath, 'utf8');
     return this.importMarkdownFromContent(content);
@@ -380,11 +394,12 @@ export class TodoMarkdownStore {
 function parseTodoBody(
   rawBody: string,
   completed: boolean
-): { highlighted: boolean; completedDate?: string; displayOrder?: number; text: string } {
+): { highlighted: boolean; completedDate?: string; displayOrder?: number; deadline?: string; text: string } {
   let body = rawBody.trim();
   let highlighted = false;
   let completedDate: string | undefined;
   let displayOrder: number | undefined;
+  let deadline: string | undefined;
 
   let parsedMarker = true;
   while (parsedMarker) {
@@ -404,6 +419,14 @@ function parseTodoBody(
       continue;
     }
 
+    const ddl = /^\[ddl:(\d{4}-\d{2}-\d{2})\](?:\s+|$)/.exec(body);
+    if (ddl) {
+      deadline = ddl[1];
+      body = body.replace(/^\[ddl:\d{4}-\d{2}-\d{2}\]\s*/, '');
+      parsedMarker = true;
+      continue;
+    }
+
     const done = /^\[done:(\d{4}-\d{2}-\d{2})\](?:\s+|$)/.exec(body);
     if (done) {
       completedDate = done[1];
@@ -416,16 +439,17 @@ function parseTodoBody(
     body = body.slice(2, -2);
   }
 
-  return { highlighted, completedDate, displayOrder, text: body.trim() };
+  return { highlighted, completedDate, displayOrder, deadline, text: body.trim() };
 }
 
 function formatTodoLine(item: TodoItem): string {
   const checkbox = item.completed ? 'x' : ' ';
   const order = item.displayOrder && !item.completed ? `[order:${item.displayOrder}] ` : '';
+  const ddl = item.deadline ? `[ddl:${item.deadline}] ` : '';
   const done = item.completed && item.completedDate ? `[done:${item.completedDate}] ` : '';
   const marker = item.highlighted ? '[!] ' : '';
   const text = item.completed ? `~~${item.text}~~` : item.text;
-  return `- [${checkbox}] ${order}${done}${marker}${text}`;
+  return `- [${checkbox}] ${order}${ddl}${done}${marker}${text}`;
 }
 
 function compareVisibleActiveTodos(left: TodoItem, right: TodoItem, todayKey: string): number {

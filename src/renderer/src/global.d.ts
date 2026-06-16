@@ -12,6 +12,7 @@ declare global {
         setHighlighted: (id: string, highlighted: boolean) => Promise<TodoItem>;
         updateText: (id: string, text: string) => Promise<TodoItem>;
         updateNotes: (id: string, notes: string) => Promise<TodoItem>;
+        setDeadline: (id: string, deadline: string | undefined) => Promise<TodoItem>;
         reorder: (date: string, ids: string[]) => Promise<TodoItem[]>;
         reorderVisible: (ids: string[]) => Promise<TodoItem[]>;
         openSource: () => Promise<void>;

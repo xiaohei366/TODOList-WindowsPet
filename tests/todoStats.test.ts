@@ -12,7 +12,8 @@ function item(id: string, date: string, completed: boolean, completedDate?: stri
     highlighted: false,
     overdue: false,
     sourceLine: 1,
-    notes: ''
+    notes: '',
+    deadline: undefined
   };
 }
 

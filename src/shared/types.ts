@@ -9,11 +9,13 @@ export type TodoItem = {
   displayOrder?: number;
   sourceLine: number;
   notes: string;
+  deadline?: string;
 };
 
 export type TodoMenuActionType =
   | 'edit'
   | 'edit-notes'
+  | 'set-deadline'
   | 'toggle-completed'
   | 'toggle-highlighted'
   | 'delete'

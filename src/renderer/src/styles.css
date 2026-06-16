@@ -458,6 +458,61 @@ button {
   justify-content: flex-end;
 }
 
+.todo-deadline--overdue {
+  color: #bf3b30 !important;
+  font-weight: 600;
+}
+
+.todo-deadline--due-today {
+  color: #d4820a !important;
+  font-weight: 600;
+}
+
+.todo-deadline-editor {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 2px 0;
+}
+
+.todo-deadline-inputs {
+  display: flex;
+  gap: 4px;
+}
+
+.todo-deadline-inputs input {
+  min-width: 0;
+  height: 26px;
+  border: 1px solid rgba(61, 89, 78, 0.24);
+  border-radius: 6px;
+  outline: 0;
+  padding: 0 6px;
+  color: #17201d;
+  background: #ffffff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.todo-deadline-inputs input:focus {
+  border-color: #287a61;
+}
+
+.todo-deadline-year {
+  width: 48px;
+}
+
+.todo-deadline-month,
+.todo-deadline-day {
+  width: 28px;
+}
+
+.todo-deadline-editor-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
 .pet-anchor {
   position: absolute;
   left: 50%;
