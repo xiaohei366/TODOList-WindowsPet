@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "clean": "node -e \"const fs=require('node:fs'),p=require('node:path');if(fs.existsSync('release')){for(const f of fs.readdirSync('release')){try{fs.rmSync(p.join('release',f),{recursive:true,force:true})}catch{}}}\"",
     "clean:release": "node -e \"const fs=require('node:fs'),path=require('node:path');if(fs.existsSync('release')){for(const name of fs.readdirSync('release')){if(!name.endsWith('.exe'))fs.rmSync(path.join('release',name),{recursive:true,force:true});}}\"",
-    "build": "npm run clean && npm run typecheck && electron-vite build && electron-builder --win portable --publish never && npm run clean:release"
+    "kill-app": "node scripts/kill-app.js",
+"build": "npm run kill-app && npm run clean && npm run typecheck && electron-vite build && electron-builder --win portable --publish never && npm run clean:release"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.1.1",
