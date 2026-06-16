@@ -800,10 +800,12 @@ export function App(): ReactElement {
                       </button>
                       <div className="todo-copy">
                         <span>{item.text}</span>
-                        <small>{item.overdue ? item.date : tr('todo.today')}</small>
-                        {item.notes && editingNotesTodo?.id !== item.id ? (
-                          <small className="todo-notes-preview">{item.notes}</small>
-                        ) : null}
+                        <div className="todo-copy-meta">
+                          <small>{item.overdue ? item.date : tr('todo.today')}</small>
+                          {item.notes && editingNotesTodo?.id !== item.id ? (
+                            <small className="todo-notes-preview">{item.notes}</small>
+                          ) : null}
+                        </div>
                       </div>
                       {editingNotesTodo?.id === item.id ? (
                         <form className="todo-notes-editor" onSubmit={(event) => void submitNotesEdit(event, item)}>
