@@ -985,6 +985,18 @@ export function App(): ReactElement {
               ) : null}
               {editingTagTodo?.id === item.id ? (
                 <form className="todo-tag-editor" onSubmit={(event) => void submitTagEdit(event, item)}>
+                  {existingActiveTags.length > 0 ? (
+                    <select
+                      className="todo-tag-select"
+                      value={existingActiveTags.includes(editingTagTodo.tag) ? editingTagTodo.tag : ''}
+                      onChange={(event) => setEditingTagTodo({ id: item.id, tag: event.target.value })}
+                    >
+                      <option value="">{tr('todo.selectExistingTag')}</option>
+                      {existingActiveTags.map((tag) => (
+                        <option key={tag} value={tag}>{tag}</option>
+                      ))}
+                    </select>
+                  ) : null}
                   <div className="todo-tag-editor__row">
                     <input autoFocus value={editingTagTodo.tag} onChange={(event) => setEditingTagTodo({ id: item.id, tag: event.target.value })} placeholder={tr('todo.tagPlaceholder')} />
                     {item.tag ? (
@@ -995,15 +1007,6 @@ export function App(): ReactElement {
                     <button className="icon-button" title={tr('todo.saveTag')} type="submit"><Check size={16} /></button>
                     <button className="icon-button" title={tr('menu.cancelEdit')} type="button" onClick={() => setEditingTagTodo(null)}><X size={16} /></button>
                   </div>
-                  {existingActiveTags.length > 0 ? (
-                    <div className="todo-tag-suggestions">
-                      {existingActiveTags.map((tag) => (
-                        <button className={editingTagTodo.tag === tag ? 'todo-tag-suggestion todo-tag-suggestion--active' : 'todo-tag-suggestion'} key={tag} type="button" onClick={() => setEditingTagTodo({ id: item.id, tag })}>
-                          {tag}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
                 </form>
               ) : null}
               {editingNotesTodo?.id === item.id ? (

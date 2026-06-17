@@ -439,7 +439,8 @@ button {
   align-items: center;
 }
 
-.todo-tag-editor input {
+.todo-tag-editor input,
+.todo-tag-select {
   min-width: 0;
   height: 28px;
   border: 1px solid rgba(61, 89, 78, 0.24);
@@ -450,35 +451,17 @@ button {
   background: #ffffff;
 }
 
-.todo-tag-editor input:focus {
-  border-color: #287a61;
-}
-
-.todo-tag-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.todo-tag-suggestion {
-  max-width: 112px;
-  overflow: hidden;
-  border-radius: 999px;
-  padding: 3px 8px;
+.todo-tag-select {
+  width: 100%;
   color: #287a61;
-  background: rgba(40, 122, 97, 0.1);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 750;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.todo-tag-suggestion:hover,
-.todo-tag-suggestion--active {
-  color: #ffffff;
-  background: #287a61;
+.todo-tag-editor input:focus,
+.todo-tag-select:focus {
+  border-color: #287a61;
 }
 
 .todo-tag-chip {
