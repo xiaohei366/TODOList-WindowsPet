@@ -555,6 +555,7 @@ export function App(): ReactElement {
     if (!text) return;
     await window.todoPet.todos.addSubTask(parentId, text);
     setNewSubTaskText('');
+    setSubTaskComposerParent(null);
   }
 
   async function submitSubTaskDeadlineForm(event: FormEvent, parentId: string): Promise<void> {
@@ -1129,6 +1130,7 @@ export function App(): ReactElement {
                       'todo-item',
                       'todo-sub-task',
                       sub.completed ? 'todo-item--done' : '',
+                      editingTodo?.id === sub.id && editingTodo?.parentId === item.id ? 'todo-item--editing' : '',
                       draggingSubTask?.subTaskId === sub.id ? 'todo-sub-task--dragging' : ''
                     ].join(' ')}
                     key={sub.id}
