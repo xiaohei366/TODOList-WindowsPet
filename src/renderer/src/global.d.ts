@@ -13,6 +13,7 @@ declare global {
         updateText: (id: string, text: string) => Promise<TodoItem>;
         updateNotes: (id: string, notes: string) => Promise<TodoItem>;
         setDeadline: (id: string, deadline: string | undefined) => Promise<TodoItem>;
+        updateTag: (id: string, tag: string | undefined) => Promise<TodoItem>;
         addSubTask: (parentId: string, text: string) => Promise<TodoItem>;
         updateSubTask: (parentId: string, subTaskId: string, text: string) => Promise<TodoItem>;
         setSubTaskCompleted: (parentId: string, subTaskId: string, completed: boolean) => Promise<TodoItem>;

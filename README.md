@@ -22,8 +22,10 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Hover the pet's bottom-right corner to reveal a resize handle; drag it to scale the pet and TODO panel between 65% and 200%.
 - Visible system tray icon with show/hide, open raw data file, and quick quit actions in the selected language.
 - Right-click pet actions for showing or hiding panels, switching language, managing scheduled TODOs, importing/exporting TODO items and scheduled tasks, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
-- Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, and moving priority up or down.
-- Long-press TODO sorting within the same day is still supported for direct drag ordering.
+- Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, adding/removing tags, adding notes/deadlines/sub-tasks, and moving priority up or down.
+- Tagged TODOs are grouped in Chrome/Edge-like colored tag groups that can be collapsed, expanded, and reordered against untagged TODOs.
+- Sub-tasks are stored under parent TODOs, can be collapsed with their parent, and must all be completed before the parent TODO can be marked done.
+- Long-press TODO sorting is supported for direct drag ordering; tagged TODOs reorder within their tag group, while tag groups and untagged TODOs reorder at the same top level.
 - Completed TODOs are rendered with strikethrough and moved to the end of the day.
 - Pet state changes based on TODO state: `review` for active TODOs, `idle` when clear, `waving` on hover or after adding, and directional running while dragging.
 - Pet animations use Codex-compatible rows and frames with a calmer desktop playback cadence.
@@ -78,7 +80,7 @@ npm run build
 The portable executable is generated at:
 
 ```text
-release/TOList-Desktop-Pet-0.2.2.exe
+release/TOList-Desktop-Pet-0.3.0.exe
 ```
 
 ## Markdown TODO Format
@@ -99,7 +101,9 @@ The app stores TODOs in this format:
 ### 2026-05-11 Monday
 
 - [ ] [!] Important item
-- [ ] [order:1] Display-priority item
+- [ ] [order:1] [tag:Work] [ddl:2026-05-12] Display-priority item
+  - [ ] Sub-task item
+  - Inline note text
 - [ ] Normal item
 - [x] [done:2026-05-11] ~~Finished item~~
 ```
@@ -111,7 +115,11 @@ Rules:
 - `###` headings are days in `YYYY-MM-DD Weekday`.
 - `[!]` marks a TODO as red/high priority.
 - `[order:n]` stores display priority for active visible TODOs, including cross-date ordering between overdue and today.
+- `[tag:name]` assigns a parent TODO to a single tag group. Tag groups are displayed as colored collapsible groups and can be reordered against untagged TODOs.
+- `[ddl:YYYY-MM-DD]` stores a deadline for a parent TODO or sub-task.
 - `[done:YYYY-MM-DD]` records the local date when a TODO was completed, so legacy TODOs finished today count toward today's completed total.
+- Indented checkbox lines such as `  - [ ] Sub-task item` are sub-tasks of the parent TODO.
+- Indented plain lines such as `  - Inline note text` are notes for the parent TODO.
 - Completed items use `[x]` and strikethrough.
 - Deleting a TODO removes its Markdown line.
 

@@ -22,8 +22,10 @@
 - 鼠标移动到宠物右下角会显示直角缩放柄，拖动后可在 65% 到 200% 之间同步缩放宠物和 TODO 框。
 - 系统托盘会显示可见图标，支持显示/隐藏窗口、打开存储数据的原始文件和快速退出。
 - 右键宠物可显示或隐藏面板、切换语言、管理定时 TODO、导入/导出 TODO 项和定时任务、导入宠物 zip、刷新宠物、切换宠物样式和退出。
-- 右键 TODO 使用原生菜单，可编辑、标记完成、删除、标红或取消标红，并通过 `调整优先级` 下的 `上移` 或 `下移` 调整优先级。
-- 长按 TODO 仍可在同一天内拖拽排序。
+- 右键 TODO 使用原生菜单，可编辑、标记完成、删除、标红或取消标红、添加/移除标签、添加备注/截止日期/子任务，并通过 `调整优先级` 下的 `上移` 或 `下移` 调整优先级。
+- 带标签的 TODO 会按 Chrome/Edge 风格的彩色标签组聚合展示，标签组可折叠、展开，并可与未打标签 TODO 同级调整顺序。
+- 子任务保存在父 TODO 下方，可随父 TODO 折叠；父 TODO 必须等待所有子任务完成后才能标记完成。
+- 长按 TODO 可直接拖拽排序；带标签 TODO 只能在标签组内排序，标签组和未打标签 TODO 在顶层同级排序。
 - TODO 完成后会划线并移动到当天列表末尾。
 - 宠物状态会跟随 TODO 状态切换：有未完成 TODO 时为 `review`，清空后为 `idle`，鼠标悬停或新增后短暂 `waving`，拖拽时根据方向显示 `running-left` 或 `running-right`。
 - 宠物动画保持 Codex 兼容的状态行和帧数，但播放节奏更慢，更适合桌面常驻。
@@ -78,7 +80,7 @@ npm run build
 构建后的便携版可执行文件位于：
 
 ```text
-release/TOList-Desktop-Pet-0.2.2.exe
+release/TOList-Desktop-Pet-0.3.0.exe
 ```
 
 ## Markdown TODO 格式
@@ -99,7 +101,9 @@ release/TOList-Desktop-Pet-0.2.2.exe
 ### 2026-05-11 Monday
 
 - [ ] [!] Important item
-- [ ] [order:1] Display-priority item
+- [ ] [order:1] [tag:工作] [ddl:2026-05-12] Display-priority item
+  - [ ] Sub-task item
+  - Inline note text
 - [ ] Normal item
 - [x] [done:2026-05-11] ~~Finished item~~
 ```
@@ -111,7 +115,11 @@ release/TOList-Desktop-Pet-0.2.2.exe
 - `###` 表示日期，格式为 `YYYY-MM-DD Weekday`。
 - `[!]` 表示标红或高优先级。
 - `[order:n]` 表示可见 TODO 的展示优先级，可用于逾期任务和今日任务之间的跨日期排序。
+- `[tag:name]` 将父 TODO 归入单个标签组；标签组会以彩色折叠分组展示，并可与未打标签 TODO 同级排序。
+- `[ddl:YYYY-MM-DD]` 表示父 TODO 或子任务的截止日期。
 - `[done:YYYY-MM-DD]` 表示 TODO 的本地完成日期，因此今天完成的历史遗留 TODO 也会计入今日完成数。
+- 缩进 checkbox 行（如 `  - [ ] Sub-task item`）表示父 TODO 的子任务。
+- 缩进纯文本行（如 `  - Inline note text`）表示父 TODO 的备注。
 - 完成项使用 `[x]` 和删除线。
 - 删除 TODO 会直接移除对应 Markdown 行。
 

@@ -469,6 +469,10 @@ function showTodoMenu(payload: { point?: { x: number; y: number }; item: TodoIte
       click: () => sendTodoMenuAction({ type: 'edit-notes', id: item.id })
     },
     {
+      label: tr('menu.editTag'),
+      click: () => sendTodoMenuAction({ type: 'edit-tag', id: item.id })
+    },
+    {
       label: tr('menu.addSubTask'),
       click: () => sendTodoMenuAction({ type: 'add-sub-task', id: item.id })
     },
@@ -577,6 +581,11 @@ function registerIpc(): void {
   });
   ipcMain.handle('todos:setDeadline', async (_event, id: string, deadline: string | undefined) => {
     const item = await todoStore.setDeadline(id, deadline);
+    await sendTodosChanged();
+    return item;
+  });
+  ipcMain.handle('todos:updateTag', async (_event, id: string, tag: string | undefined) => {
+    const item = await todoStore.updateTag(id, tag);
     await sendTodosChanged();
     return item;
   });

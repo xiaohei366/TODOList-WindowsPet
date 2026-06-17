@@ -425,6 +425,37 @@ button {
   min-width: 0;
 }
 
+.todo-tag-editor {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 28px 28px 28px;
+  gap: 5px;
+  padding: 2px 0;
+}
+
+.todo-tag-editor input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid rgba(61, 89, 78, 0.24);
+  border-radius: 6px;
+  outline: 0;
+  padding: 0 8px;
+  color: #17201d;
+  background: #ffffff;
+}
+
+.todo-tag-editor input:focus {
+  border-color: #287a61;
+}
+
+.todo-tag-chip {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #287a61 !important;
+  font-weight: 700;
+}
+
 .todo-notes-editor {
   grid-column: 1 / -1;
   display: flex;
@@ -511,6 +542,89 @@ button {
   display: flex;
   gap: 4px;
   justify-content: flex-end;
+}
+
+.todo-tag-group {
+  --tag-color: #2f6fed;
+  margin-top: 6px;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 34%, rgba(45, 69, 60, 0.14));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--tag-color) 8%, #ffffff);
+  box-shadow: 0 6px 14px rgba(35, 45, 42, 0.08);
+}
+
+.todo-tag-group--dragging {
+  opacity: 0.72;
+  outline: 2px solid rgba(40, 122, 97, 0.35);
+}
+
+.todo-tag-group__header {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.todo-tag-group__header:active {
+  cursor: grabbing;
+}
+
+.todo-tag-group__toggle {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 5px;
+  color: #30423a;
+  background: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+}
+
+.todo-tag-group__toggle:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.todo-tag-group__pill {
+  display: inline-flex;
+  max-width: 150px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: #ffffff;
+  background: var(--tag-color);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-tag-group__count {
+  color: #4f635b;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.todo-tag-group__items {
+  padding: 0 5px 6px;
+}
+
+.todo-tag-group .todo-item {
+  border-left: 3px solid var(--tag-color);
+}
+
+.todo-tag-group .todo-item:first-child {
+  margin-top: 1px;
+}
+
+.todo-item--tagged,
+.todo-sub-task--tagged,
+.todo-tag-group .todo-sub-task-composer {
+  margin-left: 8px;
 }
 
 .todo-sub-task {

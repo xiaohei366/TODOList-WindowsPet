@@ -135,6 +135,58 @@ describe('TodoMarkdownStore', () => {
     await expect(readFile(file, 'utf8')).resolves.toContain('- [ ] [order:1] [!] Renamed task');
   });
 
+  test('parses, updates, and removes todo tag markers', async () => {
+    await writeFile(
+      file,
+      [
+        '# 2026',
+        '',
+        '## 2026-05',
+        '',
+        '### 2026-05-11 Monday',
+        '',
+        '- [ ] [tag:工作] Tagged todo',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+    const store = new TodoMarkdownStore(file, () => today);
+    const item = (await store.list())[0];
+
+    expect(item).toMatchObject({ text: 'Tagged todo', tag: '工作' });
+
+    const updated = await store.updateTag(item.id, '生活');
+    expect(updated).toMatchObject({ tag: '生活' });
+    await expect(readFile(file, 'utf8')).resolves.toContain('- [ ] [tag:生活] Tagged todo');
+
+    await store.updateTag((await store.list())[0].id, undefined);
+    const content = await readFile(file, 'utf8');
+    expect(content).toContain('- [ ] Tagged todo');
+    expect(content).not.toContain('[tag:');
+  });
+
+  test('preserves todo tag across mutations and keeps subtasks untagged', async () => {
+    const store = new TodoMarkdownStore(file, () => today);
+    const item = await store.add('Original');
+    await store.updateTag(item.id, '工作');
+    const tagged = (await store.list())[0];
+    await store.addSubTask(tagged.id, 'Sub task');
+    const withSub = (await store.list())[0];
+    await store.setDeadline(withSub.id, '2026-05-12');
+    const withDeadline = (await store.list())[0];
+    await store.setHighlighted(withDeadline.id, true);
+    const highlighted = (await store.list())[0];
+    const renamed = await store.updateText(highlighted.id, 'Renamed');
+
+    expect(renamed).toMatchObject({ tag: '工作', text: 'Renamed', deadline: '2026-05-12', highlighted: true });
+    const completed = await store.setCompleted(renamed.id, true);
+    expect(completed).toMatchObject({ tag: '工作', completed: true });
+    const content = await readFile(file, 'utf8');
+    expect(content).toContain('- [x] [ddl:2026-05-12] [tag:工作] [done:2026-05-11] [!] ~~Renamed~~');
+    expect(content).toContain('  - [ ] Sub task');
+    expect(content).not.toContain('  - [ ] [tag:');
+  });
+
   test('reorders only active items within one day and keeps completed items last', async () => {
     const store = new TodoMarkdownStore(file, () => today);
     const first = await store.add('First');

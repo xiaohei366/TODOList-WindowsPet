@@ -19,12 +19,14 @@ export type TodoItem = {
   sourceLine: number;
   notes: string;
   deadline?: string;
+  tag?: string;
   subTasks: TodoSubTask[];
 };
 
 export type TodoMenuActionType =
   | 'edit'
   | 'edit-notes'
+  | 'edit-tag'
   | 'set-deadline'
   | 'add-sub-task'
   | 'toggle-completed'

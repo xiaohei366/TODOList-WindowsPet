@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('todoPet', {
     updateText: (id: string, text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateText', id, text),
     updateNotes: (id: string, notes: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateNotes', id, notes),
     setDeadline: (id: string, deadline: string | undefined): Promise<TodoItem> => ipcRenderer.invoke('todos:setDeadline', id, deadline),
+    updateTag: (id: string, tag: string | undefined): Promise<TodoItem> => ipcRenderer.invoke('todos:updateTag', id, tag),
     addSubTask: (parentId: string, text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:addSubTask', parentId, text),
     updateSubTask: (parentId: string, subTaskId: string, text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:updateSubTask', parentId, subTaskId, text),
     setSubTaskCompleted: (parentId: string, subTaskId: string, completed: boolean): Promise<TodoItem> => ipcRenderer.invoke('todos:setSubTaskCompleted', parentId, subTaskId, completed),

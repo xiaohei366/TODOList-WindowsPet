@@ -106,6 +106,7 @@ export function parseTodoMarkdown(content: string, todayKey: string): ParsedTodo
       order,
       notes: noteLines.join('\n'),
       deadline: parsed.deadline,
+      tag: parsed.tag,
       subTasks
     });
 
@@ -195,6 +196,7 @@ export class TodoMarkdownStore {
       sourceLine: 0,
       order: items.length,
       notes: '',
+      tag: undefined,
       subTasks: []
     });
     await this.writeItems(items);
@@ -288,6 +290,19 @@ export class TodoMarkdownStore {
     }
 
     const updated = { ...target, deadline: deadline || undefined };
+    const next = items.map((item) => (item.id === id ? updated : item));
+    await this.writeItems(next);
+    return this.findUpdated(updated);
+  }
+
+  async updateTag(id: string, tag: string | undefined): Promise<TodoItem> {
+    const items = await this.readItems();
+    const target = items.find((item) => item.id === id);
+    if (!target) {
+      throw new Error('Todo not found.');
+    }
+
+    const updated = { ...target, tag: cleanTodoTag(tag) };
     const next = items.map((item) => (item.id === id ? updated : item));
     await this.writeItems(next);
     return this.findUpdated(updated);
@@ -531,7 +546,8 @@ export class TodoMarkdownStore {
         item.date === target.date &&
         item.text === target.text &&
         item.completed === target.completed &&
-        item.highlighted === target.highlighted
+        item.highlighted === target.highlighted &&
+        item.tag === target.tag
     );
     if (!match) {
       throw new Error('Updated todo not found.');
@@ -564,12 +580,13 @@ export class TodoMarkdownStore {
 function parseTodoBody(
   rawBody: string,
   completed: boolean
-): { highlighted: boolean; completedDate?: string; displayOrder?: number; deadline?: string; text: string } {
+): { highlighted: boolean; completedDate?: string; displayOrder?: number; deadline?: string; tag?: string; text: string } {
   let body = rawBody.trim();
   let highlighted = false;
   let completedDate: string | undefined;
   let displayOrder: number | undefined;
   let deadline: string | undefined;
+  let tag: string | undefined;
 
   let parsedMarker = true;
   while (parsedMarker) {
@@ -597,6 +614,14 @@ function parseTodoBody(
       continue;
     }
 
+    const tagMatch = /^\[tag:([^\]]+)\](?:\s+|$)/.exec(body);
+    if (tagMatch) {
+      tag = cleanTodoTag(tagMatch[1]);
+      body = body.replace(/^\[tag:[^\]]+\]\s*/, '');
+      parsedMarker = true;
+      continue;
+    }
+
     const done = /^\[done:(\d{4}-\d{2}-\d{2})\](?:\s+|$)/.exec(body);
     if (done) {
       completedDate = done[1];
@@ -609,17 +634,18 @@ function parseTodoBody(
     body = body.slice(2, -2);
   }
 
-  return { highlighted, completedDate, displayOrder, deadline, text: body.trim() };
+  return { highlighted, completedDate, displayOrder, deadline, tag, text: body.trim() };
 }
 
 function formatTodoLine(item: TodoItem): string {
   const checkbox = item.completed ? 'x' : ' ';
   const order = item.displayOrder && !item.completed ? `[order:${item.displayOrder}] ` : '';
   const ddl = item.deadline ? `[ddl:${item.deadline}] ` : '';
+  const tag = item.tag ? `[tag:${item.tag}] ` : '';
   const done = item.completed && item.completedDate ? `[done:${item.completedDate}] ` : '';
   const marker = item.highlighted ? '[!] ' : '';
   const text = item.completed ? `~~${item.text}~~` : item.text;
-  return `- [${checkbox}] ${order}${ddl}${done}${marker}${text}`;
+  return `- [${checkbox}] ${order}${ddl}${tag}${done}${marker}${text}`;
 }
 
 function formatSubTaskLine(sub: TodoSubTask): string {
@@ -652,13 +678,19 @@ function cleanTodoText(text: string): string {
   return text.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function cleanTodoTag(tag: string | undefined): string | undefined {
+  const cleaned = (tag ?? '').replace(/[\[\]]/g, '').replace(/\s+/g, ' ').trim();
+  return cleaned || undefined;
+}
+
 function todoMergeKey(item: TodoItem): string {
   return [
     item.date,
     item.text,
     item.completed ? '1' : '0',
     item.highlighted ? '1' : '0',
-    item.completedDate ?? ''
+    item.completedDate ?? '',
+    item.tag ?? ''
   ].join('\0');
 }
 

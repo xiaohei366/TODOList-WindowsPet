@@ -1,8 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import type { TodoItem } from '../src/shared/types';
-import { moveTodoRelative, moveTodoStep } from '../src/renderer/src/todoOrdering';
+import {
+  buildTodoListUnits,
+  flattenActiveUnitIds,
+  moveTodoRelative,
+  moveTodoStep,
+  moveTodoUnitRelative
+} from '../src/renderer/src/todoOrdering';
 
-function item(id: string, text = id, completed = false, date = '2026-05-11'): TodoItem {
+function item(id: string, text = id, completed = false, date = '2026-05-11', tag?: string): TodoItem {
   return {
     id,
     date,
@@ -13,6 +19,7 @@ function item(id: string, text = id, completed = false, date = '2026-05-11'): To
     sourceLine: 1,
     notes: '',
     deadline: undefined,
+    tag,
     subTasks: []
   };
 }
@@ -48,5 +55,38 @@ describe('todoOrdering', () => {
 
     expect(moveTodoStep(items, 'today', 'up').map((todo) => todo.id)).toEqual(['today', 'old']);
     expect(moveTodoRelative(items, 'today', 'old', 'after').map((todo) => todo.id)).toEqual(['old', 'today']);
+  });
+
+  test('groups todos with the same tag as a top-level unit', () => {
+    const items = [item('a', 'a', false, '2026-05-11', 'work'), item('b'), item('c', 'c', false, '2026-05-11', 'work')];
+    const units = buildTodoListUnits(items);
+
+    expect(units.map((unit) => unit.id)).toEqual(['tag:work', 'todo:b']);
+    expect(units[0].type === 'tag-group' ? units[0].items.map((todo) => todo.id) : []).toEqual(['a', 'c']);
+  });
+
+  test('moves a tag group as one top-level unit against untagged todos', () => {
+    const items = [item('a', 'a', false, '2026-05-11', 'work'), item('b'), item('c', 'c', false, '2026-05-11', 'work')];
+    const nextUnits = moveTodoUnitRelative(buildTodoListUnits(items), 'tag:work', 'todo:b', 'after');
+
+    expect(flattenActiveUnitIds(nextUnits)).toEqual(['b', 'a', 'c']);
+  });
+
+  test('moves tagged todos only within their tag group', () => {
+    const items = [
+      item('a', 'a', false, '2026-05-11', 'work'),
+      item('b'),
+      item('c', 'c', false, '2026-05-11', 'work'),
+      item('d', 'd', false, '2026-05-11', 'life')
+    ];
+
+    expect(moveTodoStep(items, 'c', 'up').map((todo) => todo.id)).toEqual(['c', 'a', 'b', 'd']);
+    expect(moveTodoRelative(items, 'a', 'd', 'after')).toBe(items);
+  });
+
+  test('moves untagged todos across tag groups as top-level units', () => {
+    const items = [item('a', 'a', false, '2026-05-11', 'work'), item('b'), item('c', 'c', false, '2026-05-11', 'work')];
+
+    expect(moveTodoStep(items, 'b', 'up').map((todo) => todo.id)).toEqual(['b', 'a', 'c']);
   });
 });
