@@ -23,7 +23,7 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Visible system tray icon with show/hide, open raw data file, and quick quit actions in the selected language.
 - Right-click pet actions for showing or hiding panels, switching language, managing scheduled TODOs, importing/exporting TODO items and scheduled tasks, importing pet zip packages, refreshing pets, switching pet styles, and quitting.
 - Right-click TODO actions use a native menu for editing, marking done, deleting, toggling the `[!]` red marker, adding/removing tags, adding notes/deadlines/sub-tasks, and moving priority up or down.
-- Tagged TODOs are grouped in Chrome/Edge-like colored tag groups that can be collapsed, expanded, and reordered against untagged TODOs.
+- Tagged TODOs are grouped in Chrome/Edge-like colored tag groups that can be collapsed, expanded, and reordered against untagged TODOs. The tag editor suggests existing tags from unfinished TODOs while still allowing custom tags.
 - Sub-tasks are stored under parent TODOs, can be collapsed with their parent, and must all be completed before the parent TODO can be marked done.
 - Long-press TODO sorting is supported for direct drag ordering; tagged TODOs reorder within their tag group, while tag groups and untagged TODOs reorder at the same top level.
 - Completed TODOs are rendered with strikethrough and moved to the end of the day.

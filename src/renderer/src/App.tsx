@@ -286,6 +286,10 @@ export function App(): ReactElement {
   );
   const completedTodayCount = countCompletedToday(todos, formatLocalDateKey(new Date()));
   const todoUnits = useMemo(() => buildTodoListUnits(todos), [todos]);
+  const existingActiveTags = useMemo(
+    () => Array.from(new Set(todos.filter((item) => !item.completed && item.tag).map((item) => item.tag!))).sort(),
+    [todos]
+  );
   const scheduleMaxDay = getScheduleFormMaxDay(scheduleForm);
   const basePetState = getTodoDrivenPetState(todos);
   const petState =
@@ -981,14 +985,25 @@ export function App(): ReactElement {
               ) : null}
               {editingTagTodo?.id === item.id ? (
                 <form className="todo-tag-editor" onSubmit={(event) => void submitTagEdit(event, item)}>
-                  <input autoFocus value={editingTagTodo.tag} onChange={(event) => setEditingTagTodo({ id: item.id, tag: event.target.value })} placeholder={tr('todo.tagPlaceholder')} />
-                  {item.tag ? (
-                    <button className="icon-button icon-button--danger" title={tr('todo.removeTag')} type="button" onClick={() => void removeTag(item)}>
-                      <Trash2 size={16} />
-                    </button>
+                  <div className="todo-tag-editor__row">
+                    <input autoFocus value={editingTagTodo.tag} onChange={(event) => setEditingTagTodo({ id: item.id, tag: event.target.value })} placeholder={tr('todo.tagPlaceholder')} />
+                    {item.tag ? (
+                      <button className="icon-button icon-button--danger" title={tr('todo.removeTag')} type="button" onClick={() => void removeTag(item)}>
+                        <Trash2 size={16} />
+                      </button>
+                    ) : null}
+                    <button className="icon-button" title={tr('todo.saveTag')} type="submit"><Check size={16} /></button>
+                    <button className="icon-button" title={tr('menu.cancelEdit')} type="button" onClick={() => setEditingTagTodo(null)}><X size={16} /></button>
+                  </div>
+                  {existingActiveTags.length > 0 ? (
+                    <div className="todo-tag-suggestions">
+                      {existingActiveTags.map((tag) => (
+                        <button className={editingTagTodo.tag === tag ? 'todo-tag-suggestion todo-tag-suggestion--active' : 'todo-tag-suggestion'} key={tag} type="button" onClick={() => setEditingTagTodo({ id: item.id, tag })}>
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   ) : null}
-                  <button className="icon-button" title={tr('todo.saveTag')} type="submit"><Check size={16} /></button>
-                  <button className="icon-button" title={tr('menu.cancelEdit')} type="button" onClick={() => setEditingTagTodo(null)}><X size={16} /></button>
                 </form>
               ) : null}
               {editingNotesTodo?.id === item.id ? (
