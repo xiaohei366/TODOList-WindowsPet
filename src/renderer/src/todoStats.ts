@@ -8,7 +8,18 @@ export function formatLocalDateKey(date: Date): string {
 }
 
 export function countCompletedToday(items: TodoItem[], todayKey: string): number {
-  return items.filter((item) => item.completed && (item.completedDate ?? item.date) === todayKey).length;
+  let count = 0;
+  for (const item of items) {
+    if (item.completed && (item.completedDate ?? item.date) === todayKey) {
+      count += 1;
+    }
+    for (const sub of item.subTasks) {
+      if (sub.completed && (sub.completedDate ?? item.date) === todayKey) {
+        count += 1;
+      }
+    }
+  }
+  return count;
 }
 
 export function getNextLocalDayRefreshDelay(now: Date): number {

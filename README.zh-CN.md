@@ -14,7 +14,7 @@
 - TODO 默认保存到 `%USERPROFILE%\Documents\TOList\todos.md`。
 - Markdown 使用年、月、日三级标题组织，适合直接手写和阅读。
 - 宠物头顶显示 TODO 面板，最多可见三条，超出后在面板内滚动。
-- TODO 标题栏会显示“今日已完成 X 个任务”的激励文字。
+- TODO 标题栏会显示“今日已完成 X 个任务”的激励文字，统计包含已完成的父 TODO 项和子任务。
 - 会在本地日期切换后自动刷新 TODO 面板，昨日完成项会自动从可见列表移除。
 - 支持定时 TODO 规则，可创建每周重复任务和一次性未来任务。
 - 定时规则保存到 `%APPDATA%\TOList\scheduled-todos.json`。

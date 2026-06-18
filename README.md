@@ -14,7 +14,7 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Markdown-backed TODO storage at `%USERPROFILE%\Documents\TOList\todos.md`.
 - Human-readable TODO hierarchy: year, month, day.
 - Floating TODO panel above the pet, with up to three visible items and scroll support.
-- Motivational TODO header showing how many tasks have been completed today.
+- Motivational TODO header showing how many tasks have been completed today, counting both parent TODOs and completed sub-tasks.
 - Automatic local-day refresh so yesterday's completed items disappear from the visible TODO panel after midnight.
 - Scheduled TODO rules for weekly recurring tasks and one-time future tasks.
 - Scheduled rules are stored at `%APPDATA%\TOList\scheduled-todos.json`.
