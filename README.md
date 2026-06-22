@@ -80,7 +80,7 @@ npm run build
 The portable executable is generated at:
 
 ```text
-release/TOList-Desktop-Pet-0.3.0.exe
+release/TOList-Desktop-Pet-0.4.0.exe
 ```
 
 ## Markdown TODO Format

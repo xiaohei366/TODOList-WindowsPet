@@ -80,7 +80,7 @@ npm run build
 构建后的便携版可执行文件位于：
 
 ```text
-release/TOList-Desktop-Pet-0.3.0.exe
+release/TOList-Desktop-Pet-0.4.0.exe
 ```
 
 ## Markdown TODO 格式
