@@ -25,7 +25,7 @@ import {
   type TodoListUnit,
   type TodoPlacement
 } from './todoOrdering';
-import { countCompletedToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
+import { countCompletedToday, countRemainingToday, formatLocalDateKey, getNextLocalDayRefreshDelay } from './todoStats';
 import { hasExceededPetWindowDragThreshold } from './windowDrag';
 import { shouldIgnoreWindowMouseEvents } from './mousePassthrough';
 
@@ -285,6 +285,14 @@ export function App(): ReactElement {
     [pets, selectedPetId]
   );
   const completedTodayCount = countCompletedToday(todos, formatLocalDateKey(new Date()));
+  const remainingTodayCount = countRemainingToday(todos, formatLocalDateKey(new Date()));
+  const [streakPhase, setStreakPhase] = useState<'completed' | 'remaining'>('completed');
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setStreakPhase((prev) => (prev === 'completed' ? 'remaining' : 'completed'));
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, []);
   const todoUnits = useMemo(() => buildTodoListUnits(todos), [todos]);
   const existingActiveTags = useMemo(
     () => Array.from(new Set(todos.filter((item) => !item.completed && item.tag).map((item) => item.tag!))).sort(),
@@ -1274,7 +1282,13 @@ export function App(): ReactElement {
           <div className="todo-panel__top">
             <div className="todo-panel__heading">
               <span className="todo-panel__title">TODO</span>
-              <span className="todo-panel__streak">{tr('todo.completedToday', { count: completedTodayCount })}</span>
+              <span className="todo-panel__streak">
+                <span key={streakPhase} className="todo-panel__streak-text">
+                  {streakPhase === 'completed'
+                    ? tr('todo.completedToday', { count: completedTodayCount })
+                    : tr('todo.remainingToday', { count: remainingTodayCount })}
+                </span>
+              </span>
             </div>
             <button className="icon-button" title={tr('todo.add')} onClick={() => setComposerOpen(true)}>
               <Plus size={16} />

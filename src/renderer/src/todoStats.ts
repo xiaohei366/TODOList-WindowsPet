@@ -22,6 +22,32 @@ export function countCompletedToday(items: TodoItem[], todayKey: string): number
   return count;
 }
 
+export function countRemainingToday(items: TodoItem[], todayKey: string): number {
+  // 统计“今日仍需完成”的项：
+  // 1. 父 TODO 未完成且设置了截止日期且截止日期不晚于今日：父项计 1 + 其全部未完成子任务。
+  // 2. 否则父项不计入，但其子任务按自身截止日期独立判断（未完成且截止日期 ≤ 今日才计入）。
+  // 未设置截止日期的项不计入。
+  let count = 0;
+  for (const item of items) {
+    const parentCounts = !item.completed && item.deadline !== undefined && item.deadline <= todayKey;
+    if (parentCounts) {
+      count += 1;
+      for (const sub of item.subTasks) {
+        if (!sub.completed) {
+          count += 1;
+        }
+      }
+    } else {
+      for (const sub of item.subTasks) {
+        if (!sub.completed && sub.deadline !== undefined && sub.deadline <= todayKey) {
+          count += 1;
+        }
+      }
+    }
+  }
+  return count;
+}
+
 export function getNextLocalDayRefreshDelay(now: Date): number {
   const nextRefresh = new Date(now);
   nextRefresh.setHours(24, 0, 1, 0);

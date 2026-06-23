@@ -27,5 +27,7 @@ describe('i18n helpers', () => {
     expect(t('en-US', 'menu.openMarkdown')).toBe('Open Raw Data File');
     expect(t('zh-CN', 'todo.completedToday', { count: 3 })).toBe('今日已完成 3 个任务');
     expect(t('en-US', 'todo.completedToday', { count: 3 })).toBe('3 tasks completed today');
+    expect(t('zh-CN', 'todo.remainingToday', { count: 5 })).toBe('今日仍需完成 5 个任务');
+    expect(t('en-US', 'todo.remainingToday', { count: 5 })).toBe('5 tasks still due today');
   });
 });

@@ -94,11 +94,36 @@ button {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.todo-panel__streak-text {
+  display: inline-block;
+  white-space: nowrap;
   background: linear-gradient(90deg, #287a61 0%, #d6a419 48%, #2e6be6 100%);
   background-clip: text;
   filter: drop-shadow(0 3px 8px rgba(214, 164, 25, 0.28));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: todo-streak-fade 4s ease-in-out infinite;
+}
+
+@keyframes todo-streak-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 .icon-button {
