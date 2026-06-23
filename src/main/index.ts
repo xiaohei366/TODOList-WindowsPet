@@ -779,6 +779,27 @@ async function refreshScheduledTodoTimer(): Promise<void> {
   }, Math.min(delay, 2_147_483_647));
 }
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
+app.on('second-instance', () => {
+  // 用户再次启动便携包时，聚焦已有窗口而非启动第二个实例
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  if (!mainWindow.isVisible()) {
+    mainWindow.show();
+  }
+  mainWindow.focus();
+  keepPetWindowOnTop(mainWindow);
+});
+
 app.whenReady().then(async () => {
   const paths = getAppPaths();
   todoStore = new TodoMarkdownStore(paths.todoFile);
