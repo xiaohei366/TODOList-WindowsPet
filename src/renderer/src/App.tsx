@@ -1029,7 +1029,7 @@ export function App(): ReactElement {
             </>
           )}
         </article>
-        {!collapsedParents.has(item.id) ? item.subTasks.map((sub) => (
+        {!collapsedParents.has(item.id) ? [...item.subTasks].sort((a, b) => Number(a.completed) - Number(b.completed)).map((sub) => (
           <article
             className={[
               'todo-item',
