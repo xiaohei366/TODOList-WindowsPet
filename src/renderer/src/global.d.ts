@@ -1,9 +1,19 @@
 import type { EnterTodoFocusPayload, PetPackage, ScheduledTodoInput, ScheduledTodoRule, ScheduleTarget, SubTaskMenuAction, TodoItem, TodoMenuAction, TodoSubTask } from '../../shared/types';
 import type { AppLanguage } from '../../shared/i18n';
+import type { UsageSnapshot } from '../../shared/usage';
 
 declare global {
   interface Window {
     todoPet: {
+      usage: {
+        list: () => Promise<UsageSnapshot[]>;
+        reorder: (ids: string[]) => Promise<UsageSnapshot[]>;
+        enable: (id: string) => Promise<void>;
+        refresh: (id?: string) => Promise<void>;
+        openSettings: () => Promise<void>;
+        onChanged: (listener: (snapshots: UsageSnapshot[]) => void) => () => void;
+        onOpenPanel: (listener: () => void) => () => void;
+      };
       todos: {
         list: () => Promise<TodoItem[]>;
         add: (text: string) => Promise<TodoItem>;

@@ -1,4 +1,4 @@
-export const mouseInputSelector = '.todo-panel, .pet-anchor, .ui-resize-handle, .focus-panel';
+export const mouseInputSelector = '.todo-panel, .pet-anchor, .ui-resize-handle, .focus-panel, .usage-panel';
 
 type ClosestTarget = {
   closest: (selector: string) => unknown;

@@ -31,6 +31,25 @@ Windows desktop pet TODO manager built with Electron, React, and TypeScript. It 
 - Pet state changes based on TODO state: `review` for active TODOs, `idle` when clear, `waving` on hover or after adding, and directional running while dragging.
 - Pet animations use Codex-compatible rows and frames with a calmer desktop playback cadence.
 
+## AI usage panel
+
+Right-click the pet and select **AI → AI Usage**, above the first separator. Use the panel gear to open local account settings. Connect Codex, Antigravity, or personal gateways with custom names. The panel separates remaining quota, reset times, expiry, and stale data. Pet keeps refreshing after the settings tab closes. Finish focus mode before switching panels.
+
+Codex and Antigravity use built-in browser sign-in. Select a platform and click **Browser sign-in**: the current tab navigates to the official authorization page, then returns to a Pet success screen. Choose **View account and usage** to continue; the account is saved automatically. No client ID, client secret, callback, or scope setup is required. Custom registrations remain optional under advanced login settings. Multiple accounts can coexist across platforms and within one platform. Use **Add account** or **Add another account**; switching platforms also starts a new draft. Signing in to the same identity and workspace updates authorization; a different identity adds an account. Settings and Pet cards show the platform, email, and workspace alongside the editable alias. Credentials use Windows system encryption and refresh independently. Live account authorization, quota access, and refresh still require verification through a real sign-in.
+
+- **Compact panel**: the same 304px width and list height as TODO, with smaller controls and roughly two TODO rows per account. Expand an account to see every quota as a compact child row; scroll for more. Hover a quota for exact amounts and reset/expiry times.
+- **Default quota**: Codex and personal gateways show the lowest remaining percentage (for example, a weekly 18% instead of a 5-hour 63%). Raw amounts with different units are not compared, and unknown quotas are never treated as zero.
+- **Account order and status**: account names and identities are bold. Drag a card summary or its left handle to reorder accounts; hovering near the list edge scrolls it. Release to save the order across restarts, or press Esc to cancel. A focused handle also supports the up/down arrow keys. Use **Resume and refresh** on a paused card or in settings to enable it again.
+- **Antigravity selection**: query usage in settings, choose a model/quota under **Quota or model shown on Pet**. For saved accounts it takes effect immediately without changing account status, cached quota, or a query in progress. The default is the first model. An unavailable selected model is explicitly marked; another model is not silently substituted.
+- **Multiple periods**: for Gateway Usage v1, use **Add reporting period** to include Today, This week, and This month together, each with an optional Credit budget. Other protocols retain the periods supplied by their APIs.
+- **Test query**: results and errors appear below the test button and remain separate from background updates. Tests wait for background work and reuse identical results for 10 seconds. Provider Retry-After limits still apply.
+
+The default gateway template is **Volcengine API Gateway + VeFaaS + VMP**, requiring a deployed compatible usage service. An inference endpoint alone cannot report balances. Settings support deployment-provider selection, Gateway Usage v1 / New API / Sub2API / Custom JSON, URLs, authentication, field mapping, and a separate model catalog with its own credential. For an identical protocol, replace addresses and credentials. Otherwise choose another template or mapping; providers without a usage API require a server adapter. Changing the usage URL never sends the old key to the new destination automatically.
+
+Gateway Usage v1 reporting periods and personal budgets use the UTC+8 calendar. Budgets are estimates, not official balances. Other protocols use provider timestamps; custom mappings support timezone-qualified ISO dates and Unix seconds/milliseconds. Paths append literally to the Base URL: remove duplicate `/v1` prefixes when needed.
+
+ 
+
 ## Requirements
 
 - Windows 10 or newer.

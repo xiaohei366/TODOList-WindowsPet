@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { EnterTodoFocusPayload, PetPackage, ScheduledTodoInput, ScheduledTodoRule, ScheduleTarget, SubTaskMenuAction, TodoItem, TodoMenuAction, TodoSubTask } from '../shared/types';
 import type { AppLanguage } from '../shared/i18n';
+import type { UsageSnapshot } from '../shared/usage';
 
 type Listener<T> = (payload: T) => void;
 
@@ -11,6 +12,15 @@ function onPayload<T>(channel: string, listener: Listener<T>): () => void {
 }
 
 contextBridge.exposeInMainWorld('todoPet', {
+  usage: {
+    list: (): Promise<UsageSnapshot[]> => ipcRenderer.invoke('usage:list'),
+    reorder: (ids: string[]): Promise<UsageSnapshot[]> => ipcRenderer.invoke('usage:reorder', ids),
+    enable: (id: string): Promise<void> => ipcRenderer.invoke('usage:enable', id),
+    refresh: (id?: string): Promise<void> => ipcRenderer.invoke('usage:refresh', id),
+    openSettings: (): Promise<void> => ipcRenderer.invoke('usage:openSettings'),
+    onChanged: (listener: Listener<UsageSnapshot[]>): (() => void) => onPayload('usage:changed', listener),
+    onOpenPanel: (listener: Listener<void>): (() => void) => onPayload('ui:openUsagePanel', listener)
+  },
   todos: {
     list: (): Promise<TodoItem[]> => ipcRenderer.invoke('todos:list'),
     add: (text: string): Promise<TodoItem> => ipcRenderer.invoke('todos:add', text),

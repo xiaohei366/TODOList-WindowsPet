@@ -17,6 +17,8 @@ import { dirname, join } from 'node:path';
 import JSZip from 'jszip';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TodoMarkdownStore } from './todoStore';
+import { startUsage } from './usage/integration';
+import { buildAiMenuItems } from './usage/aiMenu';
 import { PetRegistry } from './petRegistry';
 import { getAppPaths } from './paths';
 import { AppSettingsStore } from './appSettings';
@@ -46,6 +48,7 @@ let scheduledTodoStore: ScheduledTodoStore;
 let settingsStore: AppSettingsStore;
 let scheduledTodoTimer: NodeJS.Timeout | undefined;
 let aiApiServer: AiApiServer | null = null;
+let closeUsage: (() => Promise<void>) | undefined;
 let petRegistry: PetRegistry;
 let currentLanguage: AppLanguage = defaultLanguage;
 let rendererReady = false;
@@ -438,6 +441,12 @@ async function showPetMenu(point?: { x: number; y: number }): Promise<void> {
         }
       }))
     },
+    { label: tr('menu.aiRelated'), submenu: buildAiMenuItems([{ id: 'usage.open', label: 'menu.aiUsage', run: () => {
+      if (!mainWindow) return;
+      const bounds = mainWindow.getBounds(), area = screen.getDisplayMatching(bounds).workArea;
+      mainWindow.setPosition(Math.round(Math.max(area.x, Math.min(bounds.x, area.x + area.width - bounds.width))), Math.round(Math.max(area.y, Math.min(bounds.y, area.y + area.height - bounds.height))));
+      mainWindow.webContents.send('ui:openUsagePanel');
+    } }], tr) },
     { type: 'separator' },
     {
       label: tr('menu.openMarkdown'),
@@ -911,6 +920,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
 
   registerPetProtocol();
   registerIpc();
+  closeUsage = await startUsage(() => mainWindow, () => currentLanguage);
   try {
     aiApiServer = await startAiApiServer({
       todoStore,
@@ -931,10 +941,16 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {});
 
-app.on('before-quit', () => {
-  void aiApiServer?.close();
+let shutdownComplete = false;
+let shutdownStarted = false;
+app.on('before-quit', event => {
+  if (shutdownComplete) return;
+  event.preventDefault();
+  if (shutdownStarted) return;
+  shutdownStarted = true;
   todoWatch?.close();
   if (scheduledTodoTimer) {
     clearTimeout(scheduledTodoTimer);
   }
+  void Promise.allSettled([closeUsage?.(), aiApiServer?.close()]).then(() => { shutdownComplete = true; app.quit(); });
 });

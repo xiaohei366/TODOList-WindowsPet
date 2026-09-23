@@ -33,6 +33,7 @@ import { countCompletedToday, countRemainingToday, formatLocalDateKey, getNextLo
 import { hasExceededPetWindowDragThreshold } from './windowDrag';
 import { shouldIgnoreWindowMouseEvents } from './mousePassthrough';
 import { FocusMode } from './FocusMode';
+import { UsagePanel } from './UsagePanel';
 
 const selectedPetStorageKey = 'tolist:selected-pet';
 const petUiScaleStorageKey = 'tolist:pet-ui-scale';
@@ -49,6 +50,7 @@ export function App(): ReactElement {
   const [language, setLanguage] = useState<AppLanguage>(defaultLanguage);
   const [selectedPetId, setSelectedPetId] = useState<string>(() => localStorage.getItem(selectedPetStorageKey) ?? '');
   const [todoPanelVisible, setTodoPanelVisible] = useState(true);
+  const [usagePanelVisible, setUsagePanelVisible] = useState(false);
   const [schedulePanel, setSchedulePanel] = useState<{ visible: boolean; target: ScheduleTarget }>({
     visible: false,
     target: 'todo'
@@ -170,11 +172,13 @@ export function App(): ReactElement {
       }
     });
     const offToggleTodoPanel = window.todoPet.ui.onToggleTodoPanel(() => {
+      setUsagePanelVisible(false);
       setSchedulePanel((current) => ({ ...current, visible: false }));
       setTodoPanelVisible((visible) => !visible);
       setComposerOpen(false);
     });
     const offToggleSchedulePanel = window.todoPet.ui.onToggleSchedulePanel((target) => {
+      setUsagePanelVisible(false);
       setTodoPanelVisible(true);
       setSchedulePanel((current) => ({
         target,
@@ -185,6 +189,10 @@ export function App(): ReactElement {
       closeScheduleForm();
     });
     const offSelectPet = window.todoPet.ui.onSelectPet((id) => selectPet(id));
+    const offUsage = window.todoPet.usage.onOpenPanel(() => {
+      if (focusTargetRef.current) { setFocusToast(t(language, 'usage.focusHint')); return; }
+      setUsagePanelVisible(true);
+    });
     return () => {
       offTodos();
       offSchedules();
@@ -192,8 +200,9 @@ export function App(): ReactElement {
       offToggleTodoPanel();
       offToggleSchedulePanel();
       offSelectPet();
+      offUsage();
     };
-  }, [selectedPetId]);
+  }, [selectedPetId, language]);
 
   useEffect(() => {
     const offEnterTodoFocus = window.todoPet.ui.onEnterTodoFocus((payload) => {
@@ -1299,7 +1308,7 @@ export function App(): ReactElement {
         </section>
       ) : (
         <>
-          {schedulePanel.visible ? (
+          {usagePanelVisible ? <UsagePanel language={language} scale={petUiScale} onClose={() => setUsagePanelVisible(false)} onCapture={setWindowMouseInputCaptured} /> : schedulePanel.visible ? (
         <section
           className="todo-panel schedule-panel"
           aria-label={tr(schedulePanel.target === 'reminder' ? 'schedule.reminderAria' : 'schedule.aria')}
