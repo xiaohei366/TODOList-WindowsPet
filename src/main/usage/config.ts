@@ -39,7 +39,6 @@ export function validateConnection(input: unknown): UsageConnection {
     const result: UsageConnection = { id: String(c.id || ''), revision: Number(c.revision), providerId: c.providerId,
         displayName: String(c.displayName || '').trim(), enabled: c.enabled === true, intervalMinutes: Number(c.intervalMinutes),
         order: Number(c.order) || 0, pinnedMetricIds: Array.isArray(c.pinnedMetricIds) ? c.pinnedMetricIds.filter(x => typeof x === 'string').slice(0, 100) : [],
-        featuredMetricId: typeof c.featuredMetricId === 'string' ? c.featuredMetricId.slice(0, 256) || undefined : undefined,
         credentialMode: c.credentialMode, gateway: c.gateway, oauth: c.oauth,
         accountId: c.accountId ? String(c.accountId).slice(0, 256) : undefined, projectId: c.projectId ? String(c.projectId).slice(0, 256) : undefined };
     if (!result.displayName || result.displayName.length > 64)

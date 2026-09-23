@@ -10,10 +10,6 @@ export function remainingPercent(metric: UsageMetric): number | null {
 
 /** Compare percentages, never dollars against tokens or credits. Unknown quota stays unknown. */
 export function featuredMetric(snapshot: UsageSnapshot): UsageMetric | undefined {
-    if (snapshot.providerId === 'antigravity') {
-        if (snapshot.featuredMetricId) return snapshot.metrics.find(m => m.id === snapshot.featuredMetricId);
-        return snapshot.metrics.find(m => m.id.startsWith('model:')) || snapshot.metrics[0];
-    }
     const quotas = snapshot.metrics.filter(m => ['quota', 'budget', 'balance'].includes(m.kind));
     const comparable = quotas.filter(m => remainingPercent(m) !== null);
     if (comparable.length) return comparable.reduce((lowest, m) => remainingPercent(m)! < remainingPercent(lowest)! ? m : lowest);

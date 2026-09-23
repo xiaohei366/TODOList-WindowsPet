@@ -23,11 +23,15 @@ describe('compact quota summary', () => {
         expect(remainingPercent({ ...budget, unlimited: true })).toBeNull();
         expect(remainingPercent({ ...budget, remainingPercent: NaN, remaining: '0', limit: '0' })).toBeNull();
     });
-    it('honors the Antigravity selection and does not silently substitute a missing model', () => {
-        const metrics = [metric('pool:one', 'Pool'), metric('model:a', 'A', { remainingPercent: 1 }), metric('model:b', 'B', { remainingPercent: 90 })];
-        expect(featuredMetric(snapshot(metrics, { providerId: 'antigravity' }))?.id).toBe('model:a');
-        expect(featuredMetric(snapshot(metrics, { providerId: 'antigravity', featuredMetricId: 'model:b' }))?.id).toBe('model:b');
-        expect(featuredMetric(snapshot(metrics, { providerId: 'antigravity', featuredMetricId: 'model:gone' }))).toBeUndefined();
+    it('shows the lowest of the four Antigravity windows, same rule as Codex', () => {
+        const windows = [
+            metric('window:claude:5h', 'Claude · 5h', { remainingPercent: 55 }),
+            metric('window:claude:weekly', 'Claude · Weekly', { remainingPercent: 12 }),
+            metric('window:gemini:5h', 'Gemini · 5h', { remainingPercent: 40 }),
+            metric('window:gemini:weekly', 'Gemini · Weekly', { remainingPercent: 77 })
+        ];
+        expect(featuredMetric(snapshot(windows, { providerId: 'antigravity' }))?.id).toBe('window:claude:weekly');
+        expect(featuredMetric(snapshot([...windows.slice(0, 3), { ...windows[3], remainingPercent: 3 }], { providerId: 'antigravity' }))?.id).toBe('window:gemini:weekly');
     });
 });
 describe('multiple gateway periods', () => {

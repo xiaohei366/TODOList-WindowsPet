@@ -16,7 +16,7 @@ const { UsageStore } = await vite.ssrLoadModule('/src/main/usage/store.ts');
 const { UsageSettingsServer } = await vite.ssrLoadModule('/src/main/usage/settingsServer.ts');
 const { defaultConnection } = await vite.ssrLoadModule('/src/shared/usage.ts');
 const { queryUsage } = await vite.ssrLoadModule('/src/main/usage/adapters.ts');
-const { codexMetrics, antigravityModels } = await vite.ssrLoadModule('/src/main/usage/normalize.ts');
+const { codexMetrics, antigravitySummary } = await vite.ssrLoadModule('/src/main/usage/normalize.ts');
 const fixture = createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     const url = new URL(req.url, 'http://fixture');
@@ -28,7 +28,12 @@ await new Promise(r => fixture.listen(0, '127.0.0.1', r));
 const fixtureUrl = `http://127.0.0.1:${fixture.address().port}`;
 const service = new UsageService(new UsageStore(root, { available: () => false, encrypt: () => { throw new Error('No credentials in preview'); }, decrypt: () => { throw new Error('No credentials in preview'); } }), () => { }, async (c, s, signal) => {
     if (c.providerId === 'antigravity')
-        return { mock: true, planName: 'Demo plan', metrics: antigravityModels({ models: { demo: { displayName: 'Gemini · 演示', quotaInfo: { remainingFraction: 0.65, resetTime: new Date(Date.now() + 4800000).toISOString() } }, other: { displayName:'Claude · 演示', quotaInfo: {remainingFraction:0.3, resetTime:new Date(Date.now() + 7200000).toISOString()} } } }) };
+        return { mock: true, planName: 'Demo plan', metrics: antigravitySummary({ groups: [{ buckets: [
+            { bucketId: 'gemini-5h', remainingFraction: 0.65, resetTime: new Date(Date.now() + 4800000).toISOString() },
+            { bucketId: 'gemini-weekly', remainingFraction: 0.42, resetTime: new Date(Date.now() + 259200000).toISOString() },
+            { bucketId: '3p-5h', remainingFraction: 0.30, resetTime: new Date(Date.now() + 7200000).toISOString() },
+            { bucketId: '3p-weekly', remainingFraction: 0.18, resetTime: new Date(Date.now() + 345600000).toISOString() }
+        ] }] }) };
     if (c.providerId === 'codex')
         return { mock: true, planName: 'Demo plan', metrics: codexMetrics({ rate_limit: { primary_window: { used_percent: 37, limit_window_seconds: 18000, reset_after_seconds: 4800 }, secondary_window: { used_percent: 82, limit_window_seconds: 604800, reset_after_seconds: 180000 } } }) };
     if (c.gateway.baseUrl !== fixtureUrl)

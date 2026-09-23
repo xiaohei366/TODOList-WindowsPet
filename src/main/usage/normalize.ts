@@ -46,27 +46,28 @@ export function codexMetrics(data: any, now = Date.now()): UsageMetric[] {
         throw new UsageError('schema', '未返回额度窗口 / No quota windows', 'unsupported');
     return result;
 }
-export function antigravityModels(data: any): UsageMetric[] {
-    if (!data.models || typeof data.models !== 'object')
-        throw new UsageError('schema', '未返回模型额度 / Missing model quota', 'unsupported');
-    return Object.entries(data.models).filter(([, raw]) => (raw as any)?.quotaInfo).map(([id, raw]) => {
-        const value = raw as any;
-        const fraction = number(value.quotaInfo.remainingFraction);
-        return quota(`model:${id}`, value.displayName || id, fraction === null ? null : fraction * 100, timestamp(value.quotaInfo.resetTime));
-    });
-}
-export function antigravitySummary(data: any): UsageMetric[] {
-    if (!Array.isArray(data.groups))
-        throw new UsageError('schema', '汇总额度不兼容 / Invalid quota summary', 'unsupported');
-    return data.groups.flatMap((g: any, i: number) => {
-        if (!Array.isArray(g.buckets))
-            throw new UsageError('schema', '汇总额度不兼容', 'unsupported');
-        return g.buckets.map((b: any) => {
-            if (!b.bucketId)
-                throw new UsageError('schema', 'Missing bucket ID', 'unsupported');
-            const fraction = number(b.remainingFraction);
-            return quota(`pool:${g.groupId || i}:${b.bucketId}`, b.displayName || b.bucketId, fraction === null ? null : fraction * 100, timestamp(b.resetTime));
-        });
+// The card keeps only the four server windows: Claude / Gemini × 5-hour / weekly.
+// Other buckets and per-model rows (high/low variants, concrete model names) are not time
+// windows; listing them would stretch the card into a long model list, so they never enter it.
+const antigravityWindows = [
+    { family: 'claude', span: '5h', label: 'Claude · 5h', ids: ['3p-5h', 'claude:5h'] },
+    { family: 'claude', span: 'weekly', label: 'Claude · Weekly', ids: ['3p-weekly', 'claude:weekly'] },
+    { family: 'gemini', span: '5h', label: 'Gemini · 5h', ids: ['gemini-5h', 'gemini:5h'] },
+    { family: 'gemini', span: 'weekly', label: 'Gemini · Weekly', ids: ['gemini-weekly', 'gemini:weekly'] }
+] as const;
+export function antigravitySummary(data: any, now = Date.now()): UsageMetric[] {
+    const buckets: Array<{ id: unknown; fraction: unknown; resetTime: unknown }> = [];
+    if (Array.isArray(data.groups))
+        for (const g of data.groups)
+            if (Array.isArray(g?.buckets))
+                buckets.push(...g.buckets.map((b: any) => ({ id: b?.bucketId, fraction: b?.remainingFraction, resetTime: b?.resetTime })));
+    if (!buckets.length)
+        throw new UsageError('schema', '未返回额度窗口 / Missing quota windows', 'unsupported');
+    return antigravityWindows.map(window => {
+        const bucket = buckets.find(b => window.ids.includes(b.id as never));
+        const fraction = number(bucket?.fraction);
+        const valid = fraction !== null && fraction >= 0 && fraction <= 1;
+        return quota(`window:${window.family}:${window.span}`, window.label, valid ? fraction * 100 : null, bucket ? timestamp(bucket.resetTime) : null, now);
     });
 }
 export function mappedMetric(data: unknown, map: MetricMapping): UsageMetric {

@@ -133,10 +133,6 @@ export class UsageSettingsServer {
                 id: string;
             }).id);
         }
-        else if (url.pathname.startsWith('/api/usage/connections/') && url.pathname.endsWith('/featured') && req.method === 'POST') {
-            const input = await body(req);
-            result = await this.service.setFeaturedMetric(id, input.metricId);
-        }
         else if (url.pathname.startsWith('/api/usage/connections/') && url.pathname.endsWith('/enable') && req.method === 'POST') {
             await this.service.enable(id);
             result = this.service.list().find(c => c.id === id);

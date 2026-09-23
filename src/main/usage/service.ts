@@ -56,7 +56,6 @@ export class UsageService {
             const s = structuredClone(this.store.snapshots[c.id] || this.empty(c));
             s.displayName = c.displayName;
             s.account = c.account;
-            s.featuredMetricId = c.featuredMetricId;
             s.staleAfterMs = Math.max(10, 2 * c.intervalMinutes) * 60000;
             if (!c.enabled) {
                 s.state = 'paused';
@@ -76,14 +75,6 @@ export class UsageService {
     }
     save(input: unknown, supplied?: UsageCredential): Promise<UsageConnection> { return this.persist(input, supplied, false); }
     saveAuthorized(input: unknown, supplied: UsageCredential): Promise<UsageConnection> { return this.persist(input, supplied, true); }
-    async setFeaturedMetric(id: string, metricId: unknown): Promise<UsageConnection> {
-        const c = this.store.connections.find(x => x.id === id);
-        if (!c) throw new UsageError('not-found', '账号不存在 / Account not found');
-        if (c.providerId !== 'antigravity' || typeof metricId !== 'string' || metricId.length > 256)
-            throw new UsageError('invalid', '模型选择无效 / Invalid model selection');
-        // A model choice is presentation only: never serialize the form's enable switch or credentials.
-        return this.save({ ...c, featuredMetricId: metricId || undefined });
-    }
     async enable(id: string): Promise<void> {
         const c = this.store.connections.find(x => x.id === id);
         if (!c) throw new UsageError('not-found', '账号不存在 / Account not found');
@@ -154,7 +145,7 @@ export class UsageService {
             const originalConnections = this.store.connections, oldSnapshot = this.store.snapshots[c.id];
             // Ignore hidden gateway fields for official accounts. Display edits must keep the live
             // snapshot object, so a query already in flight can still publish its result.
-            const queryConfig = (value: UsageConnection) => JSON.stringify({ ...value, displayName: '', order: 0, pinnedMetricIds: [], featuredMetricId: undefined, revision: 0,
+            const queryConfig = (value: UsageConnection) => JSON.stringify({ ...value, displayName: '', order: 0, pinnedMetricIds: [], revision: 0,
                 gateway: value.providerId === 'personal-gateway' ? value.gateway : undefined });
             const onlyDisplayChange = old && !replacingCredential && queryConfig(old) === queryConfig(c);
             if (!onlyDisplayChange) this.controllers.get(c.id)?.abort();

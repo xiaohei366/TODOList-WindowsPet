@@ -6,17 +6,16 @@ import { metric } from '../src/main/usage/normalize';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 
 describe('browser sign-in settings flow', () => {
-    it.each([true, false])('saves an Antigravity model independently of enabled=%s and offers explicit resume', async enabled => {
+    it.each([true, false])('renders Antigravity without a model picker and offers explicit resume', async enabled => {
         const dom = new JSDOM(readFileSync('src/main/usage/web/index.html', 'utf8'), { url: 'http://127.0.0.1:1234/settings/ai-usage#code=test', runScripts: 'outside-only' });
         let c = { ...defaultConnection('antigravity'), id: 'google', revision: 1, enabled };
-        let modelBody: unknown, fullSave = false;
+        let fullSave = false;
         const fetch = vi.fn(async (url: string, options?: { body?: string; method?: string }) => {
             const path = url.replace('/api/usage/', ''); let data: unknown;
             if (path === 'session/exchange') data = { csrf: 'csrf' };
             else if (path === 'providers') data = [defaultConnection(), defaultConnection('antigravity')];
             else if (path === 'connections') { fullSave ||= options?.method === 'POST'; data = [c]; }
-            else if (path === 'snapshots') data = [{ connectionId: c.id, state: c.enabled ? 'ok' : 'paused', metrics: [metric('model:a', 'Gemini'), metric('model:b', 'Claude')] }];
-            else if (path === 'connections/google/featured') { modelBody = JSON.parse(options!.body!); c = { ...c, revision: 2, featuredMetricId: 'model:b' }; data = c; }
+            else if (path === 'snapshots') data = [{ connectionId: c.id, state: c.enabled ? 'ok' : 'paused', metrics: [metric('window:gemini:5h', 'Gemini · 5h', { remainingPercent: 25 }), metric('window:claude:weekly', 'Claude · Weekly', { remainingPercent: 60 })] }];
             else if (path === 'connections/google/enable') { c = { ...c, enabled: true, revision: 3 }; data = c; }
             else if (path === 'refresh') data = {};
             else throw new Error(path);
@@ -26,16 +25,16 @@ describe('browser sign-in settings flow', () => {
         try {
             dom.window.eval(readFileSync('src/main/usage/web/settings.js', 'utf8'));
             const doc = dom.window.document;
-            await vi.waitFor(() => expect(doc.querySelectorAll('#featured-metric option')).toHaveLength(3));
-            const picker = doc.querySelector('#featured-metric') as HTMLSelectElement;
-            picker.value = 'model:b'; picker.dispatchEvent(new dom.window.Event('change'));
-            await vi.waitFor(() => expect(doc.querySelector('#model-feedback')!.textContent).toContain('已更新'));
-            expect(modelBody).toEqual({ metricId: 'model:b' }); expect(fullSave).toBe(false);
+            await vi.waitFor(() => expect(doc.querySelector('#account-identity')!.textContent).toContain('Antigravity'));
+            expect(doc.querySelector('#featured-metric')).toBeNull();
+            expect(doc.querySelector('#model-settings')).toBeNull();
+            expect(doc.querySelector('#minimum-hint')!.textContent).toContain('Claude');
+            expect(doc.querySelector('#results')!.textContent).toContain('Gemini · 5h');
+            expect(fullSave).toBe(false);
             expect(c.enabled).toBe(enabled); expect((doc.querySelector('#enabled') as HTMLInputElement).checked).toBe(enabled);
             if (!enabled) expect(doc.querySelector('#refresh')!.textContent).toBe('恢复并刷新');
             (doc.querySelector('#refresh') as HTMLButtonElement).click();
             await vi.waitFor(() => expect(c.enabled).toBe(true));
-            expect(picker.value).toBe('model:b');
         } finally { await new Promise(resolve => setTimeout(resolve, 0)); dom.window.close(); }
     });
     it('renders test feedback below its button, keeps it during refresh and saves all selected periods', async () => {

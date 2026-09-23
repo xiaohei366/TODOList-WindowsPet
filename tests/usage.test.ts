@@ -31,9 +31,22 @@ describe('quota semantics and replaceable gateway contracts', () => {
         expect(rows[2].kind).toBe('reset-credit');
         expect(codexMetrics({ rate_limit: { primary_window: { used_percent: 0 } } })).toHaveLength(1);
     });
-    it('keeps arbitrary Antigravity buckets separate', () => {
-        expect(antigravitySummary({ groups: [{ buckets: [{ bucketId: 'new-pool', remainingFraction: .25, resetTime: '2099-01-01T00:00:00Z' }] }] })[0]).toMatchObject({ remainingPercent: 25, id: 'pool:0:new-pool' });
+    it('reduces Antigravity to the four Claude/Gemini windows and ignores other buckets', () => {
+        const rows = antigravitySummary({ groups: [{ buckets: [
+            { bucketId: '3p-5h', remainingFraction: .25, resetTime: '2099-01-01T00:00:00Z' },
+            { bucketId: '3p-weekly', remainingFraction: .8 },
+            { bucketId: 'gemini-5h', remainingFraction: .5 },
+            { bucketId: 'gemini-weekly', remainingFraction: .9 },
+            { bucketId: 'gemini-3.1-pro-high', remainingFraction: .4 },
+            { bucketId: 'unrelated-pool', remainingFraction: .1 }
+        ] }] });
+        expect(rows.map(m => [m.id, m.remainingPercent])).toEqual([
+            ['window:claude:5h', 25], ['window:claude:weekly', 80], ['window:gemini:5h', 50], ['window:gemini:weekly', 90]
+        ]);
+        expect(rows[0]).toMatchObject({ resetsAt: '2099-01-01T00:00:00.000Z', label: 'Claude · 5h' });
+        expect(rows.map(m => m.remainingPercent)).not.toContain(40);
         expect(() => antigravitySummary({ bad: true })).toThrow();
+        expect(() => antigravitySummary({ groups: [{ buckets: [] }] })).toThrow();
     });
     it('computes historical Credit and leaves unknown model budget incomplete', () => {
         const models = [{ id: 'a', credit: 4, credit_history: [{ from: '2026-09-01', credit: 1 }, { from: '2026-09-15', credit: 2 }] }];
@@ -258,18 +271,27 @@ describe('independent OAuth', () => {
     });
 });
 describe('persistence and scheduling', () => {
-    it('preserves partial endpoint rate limits and cached results across restart in manual mode', async () => {
+    it('preserves an endpoint rate limit and its cached windows across restart in manual mode', async () => {
         const { root, store: disk } = await store();
         const retryAt = Date.now() + 120000;
         const c = defaultConnection('antigravity'); c.intervalMinutes = 0;
+        let limited = false;
         const upstream = vi.fn(async (url: string) => {
             if (url.includes('loadCodeAssist')) return { currentTier: { id: 'pro' } };
-            if (url.includes('fetchAvailableModels')) return { models: { one: { quotaInfo: { remainingFraction: .5 } } } };
-            throw new UsageError('http-429', 'Rate limited', 'rate-limited', retryAt);
+            if (url.includes('retrieveUserQuotaSummary')) {
+                if (limited) throw new UsageError('http-429', 'Rate limited', 'rate-limited', retryAt);
+                limited = true;
+                return { groups: [{ buckets: [{ bucketId: 'gemini-5h', remainingFraction: .5 }] }] };
+            }
+            throw new UsageError('schema', 'unexpected endpoint');
         });
         const service = new UsageService(disk, () => {}, (c, s, signal) => queryUsage(c, s, signal, upstream));
         const saved = await service.save(c, { accessToken: 'test' }); service.refresh(saved.id);
         await vi.waitFor(() => expect(service.snapshots()[0].state).toBe('partial'));
+        // A later manual refresh hits the provider rate limit but keeps the cached windows.
+        (service as any).attempts.clear();
+        service.refresh(saved.id);
+        await vi.waitFor(() => expect(service.snapshots()[0].state).toBe('rate-limited'));
         await service.close();
         const query = vi.fn(async () => ({ metrics: [] }));
         const restarted = new UsageService(new UsageStore(root, codec), () => {}, query);
@@ -277,7 +299,7 @@ describe('persistence and scheduling', () => {
         restarted.refresh(saved.id);
         expect(query).not.toHaveBeenCalled();
         expect(restarted.snapshots()[0]).toMatchObject({ retryAt: new Date(retryAt).toISOString(), nextRefreshAt: null });
-        expect(restarted.snapshots()[0].metrics[0]).toMatchObject({ freshness: 'stale', remainingPercent: 50 });
+        expect(restarted.snapshots()[0].metrics.find(m => m.id === 'window:gemini:5h')).toMatchObject({ freshness: 'stale', remainingPercent: 50 });
     });
     it('retains queued manual login retries after the provider concurrency limit clears', async () => {
         const { store: disk } = await store();
@@ -344,12 +366,12 @@ describe('persistence and scheduling', () => {
         expect(service.list()).toHaveLength(0);
         expect(disk.snapshots[c.id]).toBeUndefined();
     });
-    it('keeps failed Antigravity summary stale while updating model quota', async () => {
+    it('keeps partially failed endpoint results stale while updating the rest', async () => {
         const { store: disk } = await store();
-        const service = new UsageService(disk, () => { }, async () => ({ metrics: [metric('model:new', 'New')], failedPrefixes: ['pool:'], partialError: 'summary unavailable' }));
+        const service = new UsageService(disk, () => { }, async () => ({ metrics: [metric('window:new', 'New')], failedPrefixes: ['credit:'], partialError: 'credits unavailable' }));
         cleanup.push(() => service.close());
         const c = await service.save(defaultConnection('antigravity'), { accessToken: 'test' });
-        disk.snapshots[c.id].metrics = [metric('pool:old', 'Old', { remaining: '25' })];
+        disk.snapshots[c.id].metrics = [metric('credit:old', 'Old', { remaining: '25' })];
         service.refresh(c.id);
         await vi.waitFor(() => expect(service.snapshots()[0].refreshing).toBe(false));
         expect(service.snapshots()[0].metrics).toHaveLength(2);

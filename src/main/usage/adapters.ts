@@ -1,7 +1,7 @@
 import type { UsageConnection, UsageCredential, UsageMetric } from '../../shared/usage';
 import { type RequestJson, requestJson } from './httpClient';
 import { UsageError, safeError } from './errors';
-import { antigravityModels, antigravitySummary, codexMetrics, gatewayCredit, mappedMetric, metric, nextBudgetReset, number, timestamp } from './normalize';
+import { antigravitySummary, codexMetrics, gatewayCredit, mappedMetric, metric, nextBudgetReset, number, timestamp } from './normalize';
 export type QueryResult = {
     metrics: UsageMetric[];
     planName?: string;
@@ -36,22 +36,16 @@ export async function queryUsage(c: UsageConnection, credential: UsageCredential
         const post = (path: string, body: unknown) => request(base + path, { method: 'POST', headers: { ...bearer, 'Content-Type': 'application/json', 'User-Agent': 'antigravity/1.20.5 windows/amd64' }, body: JSON.stringify(body), signal });
         const meta = await post('v1internal:loadCodeAssist', { metadata: { ideName: 'antigravity', ideType: 'ANTIGRAVITY', ideVersion: '1.20.5', platform: 'WINDOWS_AMD64', pluginType: 'GEMINI', updateChannel: 'stable' }, mode: 'FULL_ELIGIBILITY_CHECK', ...(c.projectId ? { cloudaicompanionProject: c.projectId } : {}) });
         const project = c.projectId || (typeof meta.cloudaicompanionProject === 'string' ? meta.cloudaicompanionProject : meta.cloudaicompanionProject?.id);
-        const body = project ? { project } : {};
-        const responses = await Promise.allSettled([
-            post('v1internal:fetchAvailableModels', body).then(antigravityModels),
-            post('v1internal:retrieveUserQuotaSummary', body).then(antigravitySummary)
-        ]);
-        const metrics: UsageMetric[] = [], failedPrefixes: string[] = [];
-        responses.forEach((r, index) => r.status === 'fulfilled' ? metrics.push(...r.value) : failedPrefixes.push(index ? 'pool:' : 'model:'));
-        if (responses.every(r => r.status === 'rejected'))
-            throw combinedFailure(responses);
+        // The card shows only the Claude / Gemini × 5-hour / weekly windows from the quota summary;
+        // fetchAvailableModels returns per-model rows that are not time windows, so it is not queried.
+        const summary = await post('v1internal:retrieveUserQuotaSummary', project ? { project } : {}).then(antigravitySummary);
+        const metrics: UsageMetric[] = [...summary];
         for (const credit of meta.paidTier?.availableCredits || []) {
             const amount = number(credit.creditAmount);
             if (amount !== null)
                 metrics.push(metric(`credit:${credit.creditType}`, credit.creditType || 'Credit', { kind: 'balance', unit: 'credit', remaining: String(amount) }));
         }
-        const retryAt = Math.max(0, ...responses.map(r => r.status === 'rejected' ? safeError(r.reason).retryAt || 0 : 0)) || undefined;
-        return { metrics, retryAt, planName: meta.paidTier?.id || meta.currentTier?.id, failedPrefixes, partialError: failedPrefixes.length ? '部分额度未更新 / Some quota requests failed' : undefined };
+        return { metrics, planName: meta.paidTier?.id || meta.currentTier?.id };
     }
     const g = c.gateway;
     if (g.protocol === 'gateway-usage-v1' && g.periods?.length) {

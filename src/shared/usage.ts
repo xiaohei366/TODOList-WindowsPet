@@ -72,7 +72,6 @@ export type UsageConnection = {
     intervalMinutes: number;
     order: number;
     pinnedMetricIds: string[];
-    featuredMetricId?: string;
     credentialMode: 'oauth-owned' | 'imported' | 'api-key';
     gateway: GatewayConfig;
     oauth: OAuthProfile;
@@ -112,7 +111,6 @@ export type UsageSnapshot = {
     state: UsageState;
     refreshing: boolean;
     metrics: UsageMetric[];
-    featuredMetricId?: string;
     lastAttemptAt: string | null;
     lastSuccessAt: string | null;
     nextRefreshAt: string | null;

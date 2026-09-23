@@ -26,43 +26,23 @@ async function fixture() {
 }
 
 describe('independent usage accounts', () => {
-    it('switches the Antigravity model without pausing, clearing quota, or aborting an in-flight refresh', async () => {
-        const { service, disk, query } = await fixture();
+    it('queries only the Antigravity quota summary windows without a separate model request', async () => {
+        const { service, disk } = await fixture();
         const c = await service.saveAuthorized(defaultConnection('antigravity'), secret('alice'));
         service.refresh(c.id);
         await vi.waitFor(() => expect(service.snapshots()[0].state).toBe('ok'));
         const snapshot = disk.snapshots[c.id], nextRefresh = snapshot.nextRefreshAt;
-        await service.setFeaturedMetric(c.id, 'model:two');
-        expect(service.list()[0]).toMatchObject({ enabled: true, featuredMetricId: 'model:two' });
-        expect(disk.snapshots[c.id]).toBe(snapshot);
         expect(service.snapshots()[0]).toMatchObject({ state: 'ok', nextRefreshAt: nextRefresh, metrics: [{ remaining: '80' }] });
-
-        // Start another query after its local cooldown, then change presentation while it waits.
-        (service as any).attempts.clear();
-        let finish!: () => void;
-        query.mockImplementationOnce(async (_connection, _secret, signal) => {
-            await new Promise<void>(resolve => finish = resolve);
-            expect(signal.aborted).toBe(false);
-            return { metrics: [metric('model:three', 'Three', { remaining: '72' })] };
-        });
-        service.refresh(c.id);
-        await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
-        try {
-            await service.setFeaturedMetric(c.id, 'model:three');
-            expect(service.snapshots()[0].refreshing).toBe(true);
-        } finally { finish(); }
-        await vi.waitFor(() => expect(service.snapshots()[0]).toMatchObject({ state: 'ok', refreshing: false, featuredMetricId: 'model:three', metrics: [{ remaining: '72' }] }));
         expect(disk.credential(c.id).refreshToken).toBe('refresh-alice');
     });
-    it('keeps an intentionally paused account paused when picking a model, and resumes it explicitly', async () => {
+    it('keeps an intentionally paused account paused, and resumes it explicitly', async () => {
         const { service, query } = await fixture();
         const c = await service.saveAuthorized({ ...defaultConnection('antigravity'), enabled: false }, secret('alice'));
-        await service.setFeaturedMetric(c.id, 'model:selected');
         expect(service.snapshots()[0].state).toBe('paused');
         expect(query).not.toHaveBeenCalled();
         await service.enable(c.id);
         await vi.waitFor(() => expect(service.snapshots()[0].state).toBe('ok'));
-        expect(service.list()[0]).toMatchObject({ enabled: true, featuredMetricId: 'model:selected' });
+        expect(service.list()[0]).toMatchObject({ enabled: true });
     });
     it('persists account order without cancelling queries or changing identities, and rejects stale lists', async () => {
         const { service, disk, root, query } = await fixture();
