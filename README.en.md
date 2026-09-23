@@ -48,7 +48,6 @@ The default gateway template is **Volcengine API Gateway + VeFaaS + VMP**, requi
 
 Gateway Usage v1 reporting periods and personal budgets use the UTC+8 calendar. Budgets are estimates, not official balances. Other protocols use provider timestamps; custom mappings support timezone-qualified ISO dates and Unix seconds/milliseconds. Paths append literally to the Base URL: remove duplicate `/v1` prefixes when needed.
 
- 
 
 ## Requirements
 
