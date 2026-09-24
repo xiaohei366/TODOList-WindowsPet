@@ -467,7 +467,8 @@ button {
   align-self: start;
 }
 
-.todo-notes-preview {
+.todo-copy-meta .todo-notes-preview {
+  flex-shrink: 1;
   color: #8a9490;
   font-size: 11px;
   line-height: 1.2;
